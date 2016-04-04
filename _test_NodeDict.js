@@ -1,4 +1,5 @@
-4// http://notesbyanerd.com/customizing-sublime-for-js customize sublime
+// http://www.html5rocks.com/en/tutorials/speed/v8/ js speedup
+// http://notesbyanerd.com/customizing-sublime-for-js customize sublime
 // https://css-tricks.com/exposing-form-fields-radio-button-css/ Checkbox Reveal
 
 // http://plnkr.co/edit/MOczs02DNeUJGzXAPdMd?p=preview Graph search
@@ -290,7 +291,34 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 			.classed(consts.graphClass, true);
 		return svg_group;
 	};
-
+	//////////////////////////////////////////////////////////////////////////////
+	// Array Dictionary Object (For Holding Edge Relationships)
+	//////////////////////////////////////////////////////////////////////////////
+	var Array_Dictionary = function(){
+		// Basically a hash table where the key links to an array
+		this.dict = {};
+	}
+	Array_Dictionary.prototype.add = function(key, value) {
+		if(!this.dict[key]){
+			this.dict[key] = [];
+		}
+		this.dict[key].push(value);
+	};
+	Array_Dictionary.prototype.delete = function(key, value) {
+		if(!this.dict[key]){
+			throw new Error('Key not found');
+		}
+		this.dict[key].splice(this.dict[key].indexOf(value),1);
+		if (this.dict[key].length==0){
+			delete this.dict[key];
+		}
+	};
+	Array_Dictionary.prototype.exists = function(key, value) {
+		if(!this.dict[key]){
+			return false;
+		}
+		return this.dict[key].indexOf(value) >= 0;
+	};
 	//////////////////////////////////////////////////////////////////////////////
 	// Graph Object
 	//////////////////////////////////////////////////////////////////////////////
@@ -299,12 +327,21 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 		// Graph State Variables
 		////////////////////////////////////////////////////////////////////////////
 		this.id_ct = 0;
-		this.nodes = nodes_ || [];
+		// Add Nodes and Edges
+		this.nodes = nodes_ || {};
+		this.edges_by_target = new Array_Dictionary();
+		this.edges_by_source = new Array_Dictionary();
 		this.edges = edges_ || [];
+		graph = this;
+		edges_.forEach(function(edge){
+			graph.edges_by_source.add(edge.source, edge.target);
+			graph.edges_by_target.add(edge.target, edge.source);
+		});
+		// Initialize SVG
 		this.svg = svg_;
 		this.svg = initialize_svg_markers(this.svg);
 		this.svg_group = initialize_svg_graph_group(this.svg);
-
+		// Initialize SVG Groups
 		this.paths = this.svg_group.append('g').selectAll('g'); // these aren't selecting the same thing?
 		this.circles = this.svg_group.append('g').selectAll('g');// these aren't selecting the same thing?
 
@@ -336,6 +373,7 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 		// Drag Listener
 		this.circle_drag = d3.behavior.drag()
 			.origin(function(d){
+				console.log()
 				return {x: d.x, y: d.y};
 			})
 			.on('dragstart', function(d){
@@ -513,13 +551,13 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 				// Create and Add New Node
 				var loc = d3.mouse(this.svg_group.node());
 				var new_node = {
-					node_name: 'concept_'+this.id_ct,
+					id: ++this.id_ct,
+					node_name: 'node_'+this.id_ct,
 					node_type: consts.CONCEPT,
 					x: loc[0],
 					y: loc[1],
-					id: this.id_ct++
 				};
-				this.nodes.push(new_node);
+				this.nodes[this.id_ct] = new_node;
 				// Change Graph Mode to Move Mode
 				web_graph_mode_set_mode_move();
 				// Update and Return
@@ -566,7 +604,7 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 				this.update_graph();
 			}
 		},
-		circle_mousedown_handle: function(d3node, d){
+		circle_mousedown_handle: function(d3_circle_under, node_under){
 			if(run_instructions.verbose){console.log('circle_mousedown_handle');}
 			// prevent default
 			d3.event.stopPropagation();
@@ -579,100 +617,92 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 			}
 			// If SHIFT_KEY, make dragline
 			if (d3.event.shiftKey){
-				this.mousedown_node = d;
+				this.mousedown_node = node_under;
 				this.shiftNodeDraw = d3.event.shiftKey;
 				this.dragline
 					.classed('hidden', false)
-					.attr('d', 'M'+d.x+','+d.y+'L'+d.x+','+d.y);
+					.attr('d', 'M'+node_under.x+','+node_under.y+'L'+node_under.x+','+node_under.y);
 			} else {
 				// Store State Variables
-				this.node_select(d3node, d);
+				this.node_select(d3_circle_under, node_under);
 			}
 		},
-		circle_mouseup_handle: function(d3node, d){
+		circle_mouseup_handle: function(d3_circle_under, node_under){
 			if(run_instructions.verbose){console.log('circle_mouseup_handle');}
 			// Do not prevent default!
 			// d3.event.stopPropagation();
 			this.shiftNodeDraw = false;
-			d3node.classed('connect-node', false);
+			d3_circle_under.classed('connect-node', false);
 
 			// Handle Edge Dragging
 			if(this.mousedown_node) {
 				// Handle Edge Dragging / Remove Drag Line
 				this.dragline.classed('hidden', true);
 				// Handle Edge Dragging / Dragging to Original Node
-				if( this.mousedown_node === d ) {
+				if( this.mousedown_node === node_under ) {
 					this.just_dragged = false; // Should this be here?
 				// Handle Edge Dragging / Dragging to New Node
 				} else {
-					// Handle Edge Dragging / Dragging to New Node / Create New Edge
-					var source_node = this.mousedown_node;
-					var target_node = d;
-					var new_edge = {source: source_node, target: target_node};
-					// Handle Edge Dragging / Dragging to New Node / Check for Duplicate Edge and Reverse Edge
-					var find_edge_filter = this.paths.filter(function(d2){
-						// Handle Edge Dragging / Dragging to New Node / Check for Reverse Edge
-						if( d2.source === new_edge.target && d2.target === new_edge.source ){
-							// Handle Edge Dragging / Dragging to New Node / Remove Reverse Edge
-							if(run_instructions.verbose){console.log('Reverse Edge Found. Deleting.');}
-							graph.edges.splice(graph.edges.indexOf(d2), 1);
-						}
-						// Handle Edge Dragging / Dragging to New Node / Check for Duplicate Edge
-						return d2.source === new_edge.source && d2.target == new_edge.target;
-					});
+					var source_node_id = this.mousedown_node.id;
+					var target_node_id = node_under.id;
+					var source_node_type = this.mousedown_node.node_type;
+					var target_node_type = node_under.node_type;
 					// Handle Edge Dragging / Dragging to New Node / Add New Edge / Error Handling
-					var error = (find_edge_filter[0].length || 
-											(this.mousedown_node.node_type===consts.OUTPUT) ||
-											(d.node_type===consts.INPUT))
+					var error = this.check_new_edge_validity(source_node_id, target_node_id, source_node_type, target_node_type)
 					// Handle Edge Dragging / Dragging to New Node / Add New Edge
 					if (error) {
 						if(run_instructions.verbose){console.log('Error Drawing New Edge: ' + error);} // TODO: Make error more verbose, have it appear to user.
 					} else {
-						this.edges.push(new_edge);
+						this.edges_by_source.add(source_node_id, target_node_id);
+						this.edges_by_target.add(target_node_id, source_node_id);
+						this.edges.push({source: source_node_id, target: target_node_id});
 						this.update_graph();
 					}
 				}
 			}
 			this.mousedown_node = null;
 		},
-		check_new_edge_validity: function(source_node, target_node) {
-			if (source_node.node_type === consts.OUTPUT) {
+		check_new_edge_validity: function(source_node_id, target_node_id, source_node_type, target_node_type) {
+			if (source_node_type === consts.OUTPUT) {
 				return 'Output nodes cannot pass along data';
 			}
-			if (target_node.node_type === consts.INPUT) {
+			if (target_node_type === consts.INPUT) {
 				return 'Input nodes cannot receive data';
 			}
-			if (target_node.node_type === consts.OPERATIONAL) {
+			if (target_node_type === consts.OPERATIONAL) {
 				// TODO: Check for > 2 edges-in
 				return null; 
 			}
-			var existing_edge_filter = this.paths.filter(function(d){
-				return d2.source === new_edge.source && d2.target == new_edge.target;
-			});
-			if (find_edge_filter[0].length) {
+			if (this.edges_by_source.exists(source_node_id, target_node_id)) {
 				return 'Duplicate Edge detected.'
+			}
+			if (this.edges_by_target.exists(source_node_id, target_node_id)) {
+				return 'Reverse Edge detected.'
 			}
 			// Everything OK
 			return null;
 		},
-		node_delete: function(d){
+		node_delete: function(node){
 			// Remove Select
 			this.node_remove_select();
+			var node_id = node.id;
 			// Delete Node
-			this.nodes.splice(this.nodes.indexOf(d),1);
+			delete this.nodes[node_id];
 			// Delete Associated Edges
-			this.node_delete_associated_edges(d);
+			this.node_delete_associated_edges(node_id);
 			//Update Graph
 			this.update_graph();
 		},
-		node_delete_associated_edges: function(d){
+		node_delete_associated_edges: function(delete_node_id){
 			// Find Edges
-			var delete_edges = this.edges.filter(function(d2){
-				return (d2.source === d || d2.target === d);
+			var delete_edges = this.edges.filter(function(edge){
+				return (edge.source === delete_node_id || edge.target === delete_node_id);
 			});
 			// Delete Edges
-			delete_edges.map(function(d2){
-				graph.edges.splice(graph.edges.indexOf(d2),1);
+			delete_edges.map(function(edge){
+				graph.edges.splice(graph.edges.indexOf(edge),1);
+				graph.edges_by_source.delete(edge.source, edge.target);
+				graph.edges_by_target.delete(edge.target, edge.source);
 			});
 		},
 		get_node_text: function(d){
@@ -734,7 +764,7 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 			var graph = this;
 			// find paths by selecting unique edges
 			this.paths = this.paths.data(this.edges, function(d){
-				return (d.source.id + '+' + d.target.id);
+				return (d.source + '+' + d.target);
 			});
 			// update paths
 			this.paths
@@ -743,7 +773,7 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 					return d === this.selected_edge;
 				})
 				.attr('d', function(d){
-					return 'M' + d.source.x + ',' + d.source.y + 'L' + d.target.x + ',' + d.target.y;
+					return 'M' + graph.nodes[d.source].x + ',' + graph.nodes[d.source].y + 'L' + graph.nodes[d.target].x + ',' + graph.nodes[d.target].y;
 				});
 			// add new paths
 			this.paths
@@ -752,7 +782,8 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 					.style('marker-end', 'url(#end-arrow)') // Add Arrow
 					.classed('link', true)
 					.attr('d', function(d) {
-						return 'M' + d.source.x + ',' + d.source.y + 'L' + d.target.x + ',' + d.target.y;
+						return 'M' + graph.nodes[d.source].x + ',' + graph.nodes[d.source].y + 'L' + graph.nodes[d.target].x + ',' + graph.nodes[d.target].y;
+						// return 'M' + d.source.x + ',' + d.source.y + 'L' + d.target.x + ',' + d.target.y;
 					})
 					.on('mousedown', function(d) {
 						graph.path_mousedown_handle(d3.select(this), d);
@@ -765,9 +796,7 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 		},
 		update_graph_circles: function(){
 			// Find Circles
-			this.circles = this.circles.data(this.nodes, function(d){
-					return d.id;
-				});
+			this.circles = this.circles.data(d3.values(this.nodes));
 			// Update Existing Nodes
 			// Update Existing Nodes / Update Position
 			var circle_update = this.circles
@@ -828,8 +857,8 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 		},
 		update_graph: function(){
 			// Save Current Version of Graph to Session Storage
-			sessionStorage.setItem('edges', JSON.stringify(this.jsonify_edges()));
-			sessionStorage.setItem('nodes', JSON.stringify(this.nodes));
+			// sessionStorage.setItem('edges', JSON.stringify(this.jsonify_edges()));
+			// sessionStorage.setItem('nodes', JSON.stringify(this.nodes));
 			// Update Graphs Circles and Edges
 			this.update_graph_circles();
 			this.update_graph_paths();
@@ -861,11 +890,11 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 		console.log('Initializing graph with dummy data');
 		var xLoc = width/2 - 25,
 				yLoc = 100;
-		var nodes = [{node_name: 'concept_0', id: 0, x: xLoc, y: yLoc, node_type: consts.CONCEPT},
-								 {node_name: 'concept_1', id: 1, x: xLoc, y: yLoc + 200, node_type: consts.CONCEPT}];
-		var edges = [{source: nodes[1], target: nodes[0]}];
+		var nodes = {0: {node_name: 'node_0', id: 0, x: xLoc, y: yLoc, node_type: consts.CONCEPT},
+								 1: {node_name: 'node_1', id: 1, x: xLoc, y: yLoc + 200, node_type: consts.CONCEPT}};
+		var edges = [{source: 1, target: 0}];
 		graph = new Graph(svg, nodes, edges);
-		graph.set_id(2);
+		graph.set_id(1);
 	} else {
 		console.log('Initializing empty graph');
 		graph = new Graph(svg);
