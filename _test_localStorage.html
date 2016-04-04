@@ -1,0 +1,11 @@
+<html>
+	<head>
+
+		<script type='text/javascript'>
+			var obj = ['a', 'b'];
+			localStorage.setItem('graph_autosave', JSON.stringify(obj));
+			var obj2 = JSON.parse(localStorage.getItem('graph_checkpoint'));
+			console.log(obj2);
+		</script>
+	</head>
+</html>
