@@ -42,26 +42,30 @@
 		<form class='form-horizontal' id='update-node-form' role='form' autocomplete='off'>
 			<div class='form-group'>
 				<label class='control-label col-sm-2' for='node-name-input'>Node Name:</label>
-				<input class='col-sm-6' type='text' id='node-name-input' placeholder='Node Name'>
+				<input class='col-sm-6' type='text' id='node-name-input' placeholder='Node Name' required>
 			</div>
 			<div class='form-group'>
-				<label class='control-label col-sm-2' for='node-type-input'>Node Type:</label>
+				<label class='control-label col-sm-2' for='node-name-input'>Node Description:</label>
+				<textarea class='col-sm-6' rows='3' placeholder='Node Description' required></textarea>
+			</div>
+			<div class='form-group'>
+				<label class='control-label col-sm-2' for='node_type_radio'>Node Type:</label>
 				<div class='radio'>
-					<label class='radio-inline'><input type='radio' name='node-type-input' id='node-type-concept' value=1 checked='checked'> Concept</label>
-					<label class='radio-inline'><input type='radio' name='node-type-input' id='node-type-operational' value=2> Operational</label>
-					<label class='radio-inline'><input type='radio' name='node-type-input' id='node-type-input' value=3> Input</label>
-					<label class='radio-inline'><input type='radio' name='node-type-input' id='node-type-output' value=4> Output</label>
+					<label class='radio-inline'><input type='radio' name='node_type_radio' id='node-type-concept' value=1 checked='checked'> Concept</label>
+					<label class='radio-inline'><input type='radio' name='node_type_radio' id='node-type-operational' value=2> Operational</label>
+					<label class='radio-inline'><input type='radio' name='node_type_radio' id='node-type-input' value=3> Input</label>
+					<label class='radio-inline'><input type='radio' name='node_type_radio' id='node-type-output' value=4> Output</label>
 				</div>
 			</div>
-			<div class='form-group' id='operation-type-input'>
-				<label class='control-label col-sm-offset-2 col-sm-2' for='operation-type-input'>Operation:</label>
+			<div class='form-group' id='operation_subform'>
+				<label class='control-label col-sm-offset-2 col-sm-2' for='operation_radio'>Operation:</label>
 				<div class='radio'>
-					<label class='radio-inline'><input type='radio' name='operation-type-input' value='ad' checked='checked'> Add</label>
-					<label class='radio-inline'><input type='radio' name='operation-type-input' value='sb'> Subtract</label>
-					<label class='radio-inline'><input type='radio' name='operation-type-input' value='ml'> Multiply</label>
-					<label class='radio-inline'><input type='radio' name='operation-type-input' value='dv'> Divide</label>
-					<label class='radio-inline'><input type='radio' name='operation-type-input' value='gt'> Greater Than</label>
-					<label class='radio-inline'><input type='radio' name='operation-type-input' value='lt'> Less Than</label>
+					<label class='radio-inline'><input type='radio' name='operation_radio' id='op_ad' value='ad' checked='checked'> Add</label>
+					<label class='radio-inline'><input type='radio' name='operation_radio' id='op_sb' value='sb'> Subtract</label>
+					<label class='radio-inline'><input type='radio' name='operation_radio' id='op_ml' value='ml'> Multiply</label>
+					<label class='radio-inline'><input type='radio' name='operation_radio' id='op_dv' value='dv'> Divide</label>
+					<label class='radio-inline'><input type='radio' name='operation_radio' id='op_gt' value='gt'> Greater Than</label>
+					<label class='radio-inline'><input type='radio' name='operation_radio' id='op_lt' value='lt'> Less Than</label>
 				</div>
 				<div>
 					<label class='control-label col-sm-offset-2 col-sm-2' for='operation-order-input'>Operation Order:</label>
@@ -72,14 +76,17 @@
 					<p class='col-sm-offset-0 col-sm-1' id='operation-order-rght-p'></p>
 				</div>
 			</div>
-			<div class='form-group' id='concept-type-input'>
+			<div class='form-group' id='concept_value_subform'>
 				<label class='control-label col-sm-offset-2 col-sm-2' for='concept-type-input'>Concept Data Type:</label>
 				<div class='radio'>
 					<label class='radio-inline'><input type='radio' name='concept-type-input' value='real' checked='checked'> Real-Valued</label>
 					<!-- <label class='radio-inline'><input type='radio' name='concept-type-input' value='bin'> Binary-Logistic</label> -->
 				</div>
 			</div>
-
+			<div class='form-group' id='input_select_subform'>
+				<label class='control-label col-sm-offset-2 col-sm-2' for='json-input-select'>Input Data Source:</label>
+				<select id='input-source-select'></select> 
+			</div>
 			<div class='form-group'>
 				<a id='submit-node-input'>
 					<input class='col-sm-offset-3' type='button' value='Save' />
@@ -96,6 +103,18 @@
 			</div>
 		</form>
 	</div>
+	<div id='edge-form-holder'>
+		<form class='form-horizontal' id='update-node-form' role='form' autocomplete='off'>
+			<div class='form-group'>
+				<a id='delete-edge-button'>
+					<input class='col-sm-offset-3' type='button' value='Delete'> 
+				</a>
+				<a id='really-delete-edge-button'>
+					<input class='col-sm-offset-0' type='button' value='Really?'> 
+				</a>
+			</div>
+		</form>
+	</div>
 <!--	<div id='toolbox'>
 		<input type='file' id='hidden-file-upload'>
 		<input id='upload-input' type='image' title='upload graph' src='upload-icon.png' alt='upload graph'>
@@ -104,18 +123,24 @@
 	</div> -->
 </body>
 <!-- JavaScript / Custom -->
-	<script type='text/javascript' src='_test_NodeDict.js'></script>
+	<script type='text/javascript' src='becon_graph.js'></script>
 	<script type='text/javascript'>
 		window.onload=function() {
-			web_edit_node_hide();
-			web_edit_edge_hide();
+			WEB_populate_input_select_box();
+			WEB_hide_node_form();
+			WEB_hide_edge_form();
+			// WEB_hide_node_subforms();
+			// WEB_hide_edge_subforms();
 			$('#submit-node-input').bind('click', web_handle_submit);
 			$('#cancel-node-input').bind('click', web_handle_cancel);
-			$('#delete-node-input').bind('click', web_handle_delete);
-			$('#really-delete-node-input').bind('click', web_handle_delete_really);
-			$('input[name=node-type-input]:radio').on('change', web_show_subforms);
-			$('input[name=operation-type-input]:radio').on('change', web_operation_mode_change_handle);
+			$('#delete-node-input').bind('click', web_handle_node_delete);
+			$('#really-delete-node-input').bind('click', web_handle_node_delete_really);
+			$('#delete-edge-button').bind('click', web_handle_edge_delete);
+			$('#really-delete-edge-button').bind('click', web_handle_edge_delete_really);
+			$('input[name=node_type_radio]:radio').on('change', WEB_show_node_subforms);
+			$('input[name=operation_radio]:radio').on('change', WEB_handle_operation_change);
 			$('input[name=graph-control-input]:radio').on('change', web_graph_mode_change_handle);
+			// $('#input-source-select').on('change', WEB_load_graph_input
 		}
 	</script>
 </html>
