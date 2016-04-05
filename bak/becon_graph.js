@@ -32,7 +32,7 @@
 //////////////////////////////////////////////////////////////////////////////
 // Constants and Globals
 //////////////////////////////////////////////////////////////////////////////
-
+var colors = d3.scale.category10(); // TODO: Just change this to a dictionary
 var consts =  {
 	selectedClass: 'selected',
 	connectClass: 'connect-node',
@@ -63,35 +63,6 @@ var consts =  {
 	// gtID: 'op_gt',
 	// ltID: 'op_lt',
 };
-
-// Color Generation:
-// 	colors = d3.scale.category10();
-//  colors_brighter = d3.rgb(colors(1).brighter().toString())
-//  colors_darker = d3.rgb(colors(1).darker().toString())
-var colors = {};
-colors[consts.CONCEPT] = '#9467BD';
-colors[consts.OPERATIONAL] = '#D62728';
-colors[consts.INPUT] = '#FF7F0E';
-colors[consts.OUTPUT] = '#1F77B4';
-
-var colors_brighter = {};
-colors_brighter[consts.CONCEPT] = '#D393FF';
-colors_brighter[consts.OPERATIONAL] = '#FF3739';
-colors_brighter[consts.INPUT] = '#FFB52A';
-colors_brighter[consts.OUTPUT] = '#2CAAFF';
-
-var colors_darker = {};
-colors_darker[consts.CONCEPT] = '#674884';
-colors_darker[consts.OPERATIONAL] = '#951B1C';
-colors_darker[consts.INPUT] = '#B25809';
-colors_darker[consts.OUTPUT] = '#1E701E';
-
-var node_default = {};
-node_default['node_name_prefix'] = 'node_';
-node_default['node_type'] = consts.CONCEPT;
-node_default['op_type'] = consts.add;
-
-
 var graph;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -417,97 +388,6 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 		}
 		return this.dict[key].indexOf(value) >= 0;
 	};
-
-	var Node = function(x_, y_, id_, type_, name_){
-		this.id_ = id_;
-		this.name_ = name_ || node_default.node_name_prefix + this.id_;
-		this.type_ = type_ || node_default.node_type;
-		this.x = x_;
-		this.y = y_;
-		this.in_data = {};
-		this.out_data = {};
-	};
-
-	Node.prototype = {
-		////////////////////////////////////////////////////////////////////////////
-		// Setter Functions
-		////////////////////////////////////////////////////////////////////////////
-		set type(new_type){
-			if (new_type === this.type_) {return;}
-			if (this.type_ === consts.CONCEPT){
-				// Delete Old Metadata
-				// Set New Metadata
-			} else if (this.type_ === consts.INPUT){
-			} else if (this.type_ === consts.OUTPUT){
-			} else if (this.type_ === consts.OPERATIONAL){
-			}
-			this.type_ = new_type;
-		},
-		////////////////////////////////////////////////////////////////////////////
-		// Getter Functions
-		////////////////////////////////////////////////////////////////////////////
-		get type(){
-			return this.type_;
-		},
-		get operation_type(){
-			if (this.type_ !== consts.OPERATIONAL){
-				throw new Error('Node does not support operation type.');
-			}
-			if (!this.op_type){
-				this.op_type = node_default.op_type;
-			}
-			return this.op_type;
-		},
-		get operation_left(){
-			// UNIMPLEMENTED
-		},
-		get operation_right(){
-			// UNIMPLEMENTED
-		},
-		get fill_color(){
-			return colors[this.type_];
-		},
-		get select_color(){
-			return colors_brighter[this.type_];
-		},
-		get stroke_color(){
-			return colors_darker[this.type_];
-		},
-		get text(){
-			if ( this.type_ === consts.CONCEPT ) {
-				return this.name_;
-			} else if ( this.type_ === consts.INPUT ) {
-				return 'IN: ' + this.name_;
-			} else if ( this.type_ === consts.OUTPUT ) {
-				return 'OUT: ' + this.name_;
-			} else if ( this.type_ === consts.OPERATIONAL ) {
-				return (this.name_ + ' : ' + this.operation_type);
-			} else {
-				// raise error
-			}
-		},
-		////////////////////////////////////////////////////////////////////////////
-		// Functions
-		////////////////////////////////////////////////////////////////////////////
-		switch_operation_order: function(){
-			if (this.type_ !== consts.OPERATIONAL){
-				throw new Error('Node does not support operation type.');
-			}
-			if (!this.operation_left || !this.operation_right){
-				throw new Error('Operation node missing inputs.');
-			}
-			// UNIMPLEMENTED
-		},
-		check_node_name: function(new_name){
-			// UNIMPLEMENTED
-		},
-		get_node_time_stats: function(){
-			// UNIMPLEMENTED
-		},
-		get_node_values: function(time){
-			// UNIMPLEMENTED
-		},
-	};
 	//////////////////////////////////////////////////////////////////////////////
 	// Graph Object
 	//////////////////////////////////////////////////////////////////////////////
@@ -708,8 +588,15 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 			} else if (this.node_placement_mode) {
 				// Create and Add New Node
 				var loc = d3.mouse(this.svg_group.node());
-				this.id_ct++;
-				this.nodes[this.id_ct] = new Node(loc[0], loc[1], this.id_ct);
+				var new_node = {
+					id: ++this.id_ct,
+					node_name: 'node_'+this.id_ct,
+					node_type: consts.CONCEPT,
+					node_meta: {},
+					x: loc[0],
+					y: loc[1],
+				};
+				this.nodes[this.id_ct] = new_node;
 				// Change Graph Mode to Move Mode
 				web_graph_mode_set_mode_move();
 				// Update and Return
@@ -883,11 +770,11 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 			this.selected_node_circle = d3path;
 			// Change Node Circle Appearance
 			this.selected_node_circle
-				.classed(consts.selectedClass, true); // TODO: what does this do..? Can delete?
+				.classed(consts.selectedClass, true); // what does this do..? Can delete?
 			this.selected_node_circle
 				.select('circle')
 					.classed(consts.selectedClass, true)
-					.style('fill', function(d) { return d.select_color; })
+					.style('fill', function(d) { return d3.rgb(colors(d.node_type)).brighter().toString() });
 			// Add Editing Form
 			WEB_show_node_form();
 		},
@@ -901,7 +788,7 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 			this.selected_node_circle
 				.select('circle')
 					.classed(consts.selectedClass, false)
-					.style('fill', function(d) { return d.fill_color; })
+					.style('fill', function(d) { return colors(d.node_type); });
 			// Change Node State Variables
 			this.selected_node = null;
 			this.selected_node_circle = null;
@@ -978,8 +865,8 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 			// Update Existing Nodes / Update Color
 			circle_update
 				.select('circle')
-					.style('fill', function(d) { return d.fill_color; })
-					.style('stroke', function(d) { return d.stroke_color; });
+					.style('fill', function(d) { return colors(d.node_type); })
+					.style('stroke', function(d) { return d3.rgb(colors(d.node_type)).darker().toString(); });
 			// Add New Nodes
 			var circle_enter = this.circles
 				.enter()
@@ -988,7 +875,6 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 			circle_enter
 				.classed(consts.circleGClass, true)
 				.attr('transform', function(d){
-					console.log(d);
 					return 'translate('+d.x+','+d.y+')';
 				})
 				.on('mouseover', function(d){
@@ -1011,8 +897,8 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 				.append('svg:circle')
 					.attr('class', 'node')
 					.attr('r', 48)
-					.style('fill', function(d) { return d.fill_color; })
-					.style('stroke', function(d) { return d.stroke_color; });
+					.style('fill', function(d) { return colors(d.node_type); })
+					.style('stroke', function(d) { return d3.rgb(colors(d.node_type)).darker().toString(); });
 			// Add New Nodes / Add Text
 			circle_enter
 				.append('svg:text')
@@ -1109,10 +995,10 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 				y_ = height/2 - 25,
 				id_ = 0;
 		var nodes = {
-									0: new Node(x_-200, y_-100, id_++, consts.INPUT, 'r'),
-									1: new Node(x_-200, y_+100, id_++, consts.INPUT, 'g'),
-									2: new Node(x_, y_, id_++, consts.OPERATIONAL),
-									3: new Node(x_+200, y_, id_++, consts.OUTPUT, 'relative_growth'),
+									0: {node_name: 'r', id: id_++, x: x_-200, y: y_-100, node_type: consts.INPUT, node_meta: {}},
+								 	1: {node_name: 'g', id: id_++, x: x_-200, y: y_+100, node_type: consts.INPUT, node_meta: {}},
+								 	2: {node_name: 'sub', id: id_++, x: x_, y: y_, node_type: consts.OPERATIONAL, node_meta: {'op':'ad'}},
+								 	3: {node_name: 'out', id: id_++, x: x_+200, y: y_, node_type: consts.OUTPUT, node_meta: {}},
 								};
 		var edges = [
 									{source: 1, target: 2},
