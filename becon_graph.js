@@ -91,37 +91,36 @@ node_default['node_name_prefix'] = 'node_';
 node_default['node_type'] = consts.CONCEPT;
 node_default['op_type'] = consts.add;
 
-
 var graph;
 
 ////////////////////////////////////////////////////////////////////////////////
 // WEB CODE
 ////////////////////////////////////////////////////////////////////////////////
-function WEB_hide_graph_control(){ $('#graph-control-holder').hide(); }
-function WEB_show_graph_control() { $('#graph-control-holder').show(); }
+////////////////////////////////////////////////////////////////////////////////
+// WEB CODE CONSTANTS
+////////////////////////////////////////////////////////////////////////////////
+var node_type_HTML_ID_Map = {};
+node_type_HTML_ID_Map[consts.CONCEPT] = '#node-type-concept';
+node_type_HTML_ID_Map[consts.CONCEPT] = '#node-type-input';
+node_type_HTML_ID_Map[consts.CONCEPT] = '#node-type-operational';
+node_type_HTML_ID_Map[consts.CONCEPT] = '#node-type-output';
+var operation_HTML_ID_Map = {};
+operation_HTML_ID_Map[consts.add] = '#op_ad';
+operation_HTML_ID_Map[consts.sub] = '#op_sb';
+operation_HTML_ID_Map[consts.mul] = '#op_ml';
+operation_HTML_ID_Map[consts.div] = '#op_dv';
+operation_HTML_ID_Map[consts.gt] = '#op_gt';
+operation_HTML_ID_Map[consts.lt] = '#op_lt';
 
+function WEB_hide_graph_control(){ $('#graph-holder').hide(); }
+function WEB_show_graph_control() { $('#graph-holder').show(); }
 function WEB_show_operation_node_subform() { 
 	console.log('WEB_show_operation_node_subform');
-	console.log(graph.selected_node.node_meta['op']);
 	// Show Subform
 	$('#operation_subform').show(); 
 	// Select Previous Operation
-	if (graph.selected_node.node_meta['op'] === consts.add) {
-		$('#op_ad').prop('checked', true);
-	} else if (graph.selected_node.node_meta['op'] === consts.sub) {
-		$('#op_sb').prop('checked', true);
-	} else if (graph.selected_node.node_meta['op'] === consts.mul) {
-		$('#op_ml').prop('checked', true);
-	} else if (graph.selected_node.node_meta['op'] === consts.div) {
-		$('#op_dv').prop('checked', true);
-	} else if (graph.selected_node.node_meta['op'] === consts.gt) {
-		$('#op_gt').prop('checked', true);
-	} else if (graph.selected_node.node_meta['op'] === consts.lt) {
-		$('#op_lt').prop('checked', true);
-	} else {
-		console.log('Default Operation Used');
-		$('#op_ad').prop('checked', true);
-	}
+	var radio_id = graph.selected_node.operation_type
+	$(radio_id).prop('checked', true);
 }
 function WEB_hide_operation_node_subform() { $('#operation_subform').hide(); }
 function WEB_show_concept_node_subform() { $('#concept_value_subform').show(); }
@@ -165,17 +164,8 @@ function WEB_show_node_form() {
 	// Set Node Name box to Appropriate Value
 	$('#node-name-input').val(graph.selected_node.node_name);
 	// Set Checkbox to Appropriate Value
-	if (graph.selected_node.node_type === consts.CONCEPT) {
-		$('#node-type-concept').prop('checked', true);
-	} else if (graph.selected_node.node_type === consts.INPUT) {
-		$('#node_type_radio').prop('checked', true);
-	} else if (graph.selected_node.node_type === consts.OPERATIONAL) {
-		$('#node-type-operational').prop('checked', true);
-	} else if (graph.selected_node.node_type === consts.OUTPUT) {
-		$('#node-type-output').prop('checked', true);
-	} else{
-		console.log('ERROR: Node Type not recognized');
-	};
+	var radio_id = graph.selected_node.type;
+	$(radio_id).prop('checked', true);
 	// Show the Form
 	$('#node-form-holder').show();
 	// Show Appropriate Subforms
@@ -206,26 +196,25 @@ function WEB_show_node_subforms()
 	WEB_hide_node_subforms();
 	// Get Node Type
 	var node_type = $('input[name=node_type_radio]:checked', '#update-node-form').attr('id');
+	console.log(node_type);
 	if(node_type === 'node-type-concept'){
 		// Show Relevant Form
 		WEB_show_concept_node_subform();
 		// Preview Change
-		graph.selected_node.node_type = consts.CONCEPT;
+		graph.selected_node.type = consts.CONCEPT;
 	} else if(node_type === 'node-type-input'){
 		// Show Relevant Form
 		WEB_show_input_node_subform();
 		// Preview Change
-		graph.selected_node.node_type = consts.INPUT;
+		graph.selected_node.type = consts.INPUT;
 	} else if(node_type === 'node-type-operational'){
+		// Preview Change
+		graph.selected_node.type = consts.OPERATIONAL;
 		// Show Relevant Form
 		WEB_show_operation_node_subform();
-		// Preview Change
-		graph.selected_node.node_type = consts.OPERATIONAL;
-		var operation_type = $('input[name=operation_radio]:checked', '#update-node-form').val();
-		graph.selected_node.node_meta['op'] = operation_type;
 	} else if(node_type === 'node-type-output'){
 		 // Preview Change
-		graph.selected_node.node_type = consts.OUTPUT;
+		graph.selected_node.type = consts.OUTPUT;
 	} else{
 		console.log('ERROR: Node Type not recognized');
 	};
@@ -417,18 +406,36 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 		}
 		return this.dict[key].indexOf(value) >= 0;
 	};
-
-	var Node = function(x_, y_, id_, type_, name_){
-		this.id_ = id_;
-		this.name_ = name_ || node_default.node_name_prefix + this.id_;
-		this.type_ = type_ || node_default.node_type;
-		this.x = x_;
-		this.y = y_;
+	//////////////////////////////////////////////////////////////////////////////
+	// Node Object
+	//////////////////////////////////////////////////////////////////////////////
+	var Node = function(params){
+		this.id = params.id;
+		this.name_ = params.name_ || node_default.node_name_prefix + this.id;
+		this.type_ = params.type_ || node_default.node_type;
+		this.x = params.x;
+		this.y = params.y;
 		this.in_data = {};
 		this.out_data = {};
 	};
-
 	Node.prototype = {
+		////////////////////////////////////////////////////////////////////////////
+		// JSON Functions
+		////////////////////////////////////////////////////////////////////////////
+		toSimpleObject: function(){
+			return {
+				id: this.id,
+				name_: this.name_,
+				type_: this.type_,
+				x: this.x,
+				y: this.y
+			};
+		},
+		toJSON: function(){
+			return JSON.stringify(
+				this.toSimpleObject()
+			);
+		},
 		////////////////////////////////////////////////////////////////////////////
 		// Setter Functions
 		////////////////////////////////////////////////////////////////////////////
@@ -442,6 +449,12 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 			} else if (this.type_ === consts.OPERATIONAL){
 			}
 			this.type_ = new_type;
+		},
+		set operation_type(value){
+			if (this.type_ !== consts.OPERATIONAL){
+				throw new Error('Node does not support operation type.');
+			}
+			this.op_type = value;
 		},
 		////////////////////////////////////////////////////////////////////////////
 		// Getter Functions
@@ -517,7 +530,7 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 		////////////////////////////////////////////////////////////////////////////
 		// Add Nodes and Edges
 		this.nodes = nodes_ || {};
-		this.id_ct = d3.max(Object.keys(nodes_).map(function(d){return parseInt(d);}))+1 || 0;
+		this.id_ct = d3.max(Object.keys(nodes_).map(function(d){return parseInt(d);})) || 0;
 		this.edges_by_target = new Array_Dictionary();
 		this.edges_by_source = new Array_Dictionary();
 		this.edges = edges_ || [];
@@ -620,9 +633,34 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 		graph = this;
 	};
 	//////////////////////////////////////////////////////////////////////////////
-	// Graph Functions
+	// Graph Static Functions
+	//////////////////////////////////////////////////////////////////////////////
+	Graph.fromJSON = function(svg_, json_){
+		'use strict'
+		json_ = JSON.parse(json_);
+		var nodes_obj = {};
+		d3.entries(json_.nodes).map(function(d){
+			nodes_obj[d.key] = new Node(d.value);
+		});
+		return new Graph(svg_, nodes_obj, json_.edges);
+	};
+	//////////////////////////////////////////////////////////////////////////////
+	// Graph Prototype Functions
 	//////////////////////////////////////////////////////////////////////////////
 	Graph.prototype = {
+		////////////////////////////////////////////////////////////////////////////
+		// JSON Functions
+		////////////////////////////////////////////////////////////////////////////
+		toJSON: function(){
+			var nodes_obj = {};
+			d3.entries(this.nodes).map(function(d){
+				nodes_obj[d.key] = d.value.toSimpleObject();
+			});
+			return JSON.stringify({
+				'edges': this.edges,
+				'nodes': nodes_obj
+			});
+		},
 		////////////////////////////////////////////////////////////////////////////
 		// Mechanical Functions
 		////////////////////////////////////////////////////////////////////////////
@@ -650,34 +688,6 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 		slided: function(d) {
 			graph_zoom.scale(graph.zoom_slider.property('value'))
 				.event(graph.svg);
-		},
-		////////////////////////////////////////////////////////////////////////////
-		// Save and Load Functions
-		////////////////////////////////////////////////////////////////////////////
-		save_graph: function() {
-			var save_dict = {
-				'nodes': this.nodes,
-				'edges': this.edges,
-			}
-			var blob = new Blob([window.JSON.stringify(save_dict)], {type: 'text/plain;charset=utf-8'});
-			saveAs(blob, 'graph_checkpoint.json');
-		},
-		load_graph: function() {
-			d3.json('~/graph_checkpoint (2).json', function(error, data){
-				if (error) throw error;
-
-			});
-
-			// var filereader = new window.FileReader();
-			// var graph_file = '~/graph_checkpoint (2).json'
-			// filereader.onload = function(event){
-			// 	var graph_data = JSON.parse(filereader.result);
-			// 	graph.nodes = graph_data.nodes;
-			// 	graph.edges = graph_data.edges;
-			// 	graph.set_id(graph_data.nodes.length+1);
-			// 	graph.update_graph();
-			// }
-			// filereader.readAsText(graph_file);
 		},
 		////////////////////////////////////////////////////////////////////////////
 		// Event Handles
@@ -862,20 +872,6 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 				graph.edge_delete_link(edge);
 			});
 		},
-		get_node_text: function(d){
-			console.log('get_node_text');
-			if ( d.node_type === consts.CONCEPT ) {
-				return d.node_name;
-			} else if ( d.node_type === consts.INPUT ) {
-				return 'IN: ' + d.node_name;
-			} else if ( d.node_type === consts.OUTPUT ) {
-				return 'OUT: ' + d.node_name;
-			} else if ( d.node_type === consts.OPERATIONAL ) {
-				return (d.node_name + ' : ' + d.node_meta['op']);
-			} else {
-				// raise error
-			}
-		},
 		node_select: function(d3path, d){
 			console.log('node_select');
 			// Change Node State Variables
@@ -974,7 +970,7 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 			// Update Existing Nodes / Update Text
 			circle_update
 				.select('text')
-					.text(function(d){return graph.get_node_text(d);});
+					.text(function(d){return d.text;});
 			// Update Existing Nodes / Update Color
 			circle_update
 				.select('circle')
@@ -988,7 +984,6 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 			circle_enter
 				.classed(consts.circleGClass, true)
 				.attr('transform', function(d){
-					console.log(d);
 					return 'translate('+d.x+','+d.y+')';
 				})
 				.on('mouseover', function(d){
@@ -1011,7 +1006,10 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 				.append('svg:circle')
 					.attr('class', 'node')
 					.attr('r', 48)
-					.style('fill', function(d) { return d.fill_color; })
+					.style('fill', function(d) { 
+						console.log(d);
+						console.log(d.id);
+						return d.fill_color; })
 					.style('stroke', function(d) { return d.stroke_color; });
 			// Add New Nodes / Add Text
 			circle_enter
@@ -1019,14 +1017,14 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 					.attr('x', 0)
 					.attr('y', 4)
 					.attr('class', 'circle-id')
-					.text(function(d){return graph.get_node_text(d);});
+					.text(function(d){return d.text;});
 
 			// Remove Deleted Nodes
 			this.circles.exit().remove()
 		},
 		update_graph: function(){
 			// Save Current Version of Graph to Session Storage
-			sessionStorage.setItem('edges', JSON.stringify(this.edges));
+			sessionStorage.setItem('graph', this.toJSON());
 			sessionStorage.setItem('nodes', JSON.stringify(this.nodes));
 			// Update Graphs Circles and Edges
 			this.update_graph_circles();
@@ -1079,7 +1077,7 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 		},
 		advance_run_time: function(){
 			// UNIMPLEMENTED
-		}
+		},
 	};
 
 	//////////////////////////////////////////////////////////////////////////////
@@ -1096,11 +1094,10 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 	var svg = d3.select('#graph-holder').append('svg')
 				.attr('width', width)
 				.attr('height', height);
-	if(sessionStorage.getItem('edges')){
+	var stored_session = sessionStorage.getItem('graph');
+	if(stored_session && false){
 		console.log('Loading graph from autosave');
-		var nodes = JSON.parse(sessionStorage.getItem('nodes'));
-		var edges = JSON.parse(sessionStorage.getItem('edges'));
-		graph = new Graph(svg, nodes, edges);
+		graph = Graph.fromJSON(svg, stored_session)
 	} else if(run_instructions.init_dummy){
 		var xLoc = width/2 - 25,
 		yLoc = 100;
@@ -1109,10 +1106,10 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 				y_ = height/2 - 25,
 				id_ = 0;
 		var nodes = {
-									0: new Node(x_-200, y_-100, id_++, consts.INPUT, 'r'),
-									1: new Node(x_-200, y_+100, id_++, consts.INPUT, 'g'),
-									2: new Node(x_, y_, id_++, consts.OPERATIONAL),
-									3: new Node(x_+200, y_, id_++, consts.OUTPUT, 'relative_growth'),
+									0: new Node({x: x_-200, y: y_-100, id: id_++, type_: consts.INPUT, name_: 'r'}),
+									1: new Node({x: x_-200, y: y_+100, id: id_++, type_: consts.INPUT, name_: 'g'}),
+									2: new Node({x: x_, y: y_, id: id_++, type_: consts.OPERATIONAL, operation_type: 'sb'}),
+									3: new Node({x: x_+200, y: y_, id: id_++, type_: consts.OUTPUT, name_: 'relative_growth_rate'}),
 								};
 		var edges = [
 									{source: 1, target: 2},

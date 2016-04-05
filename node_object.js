@@ -1,4 +1,3 @@
-console.log('here');
 var consts =  {
 	selectedClass: 'selected',
 	connectClass: 'connect-node',
@@ -61,18 +60,33 @@ operation_HTML_ID_Map[consts.sub] =  '#op_sb';
 // operation_HTML_ID_Map[consts.add] =  '#op_ad';
 // operation_HTML_ID_Map[consts.add] =  '#op_ad';
 
-
-	var Node = function(x_, y_, id_, type_, name_){
-		this.id_ = id_;
-		this.name_ = name_ || node_default.node_name_prefix + this.id_;
-		this.type_ = type_ || node_default.node_type;
-		this.x_ = x_;
-		this.y_ = y_;
+	var Node = function(params){
+		this.id = params.id;
+		this.name_ = params.name_ || node_default.node_name_prefix + this.id;
+		this.type_ = params.type_ || node_default.node_type;
+		this.x = params.x;
+		this.y = params.y;
 		this.in_data = {};
 		this.out_data = {};
 	};
-
 	Node.prototype = {
+		////////////////////////////////////////////////////////////////////////////
+		// JSON Functions
+		////////////////////////////////////////////////////////////////////////////
+		toSimpleObject: function(){
+			return {
+				id: this.id,
+				name_: this.name_,
+				type_: this.type_,
+				x: this.x,
+				y: this.y
+			};
+		},
+		toJSON: function(){
+			return JSON.stringify(
+				this.toSimpleObject()
+			);
+		},
 		////////////////////////////////////////////////////////////////////////////
 		// Setter Functions
 		////////////////////////////////////////////////////////////////////////////
@@ -86,6 +100,12 @@ operation_HTML_ID_Map[consts.sub] =  '#op_sb';
 			} else if (this.type_ === consts.OPERATIONAL){
 			}
 			this.type_ = new_type;
+		},
+		set operation_type(value){
+			if (this.type_ !== consts.OPERATIONAL){
+				throw new Error('Node does not support operation type.');
+			}
+			this.op_type = value;
 		},
 		////////////////////////////////////////////////////////////////////////////
 		// Getter Functions
@@ -114,7 +134,7 @@ operation_HTML_ID_Map[consts.sub] =  '#op_sb';
 		get select_color(){
 			return colors_brighter[this.type_];
 		},
-		get edge_color(){
+		get stroke_color(){
 			return colors_darker[this.type_];
 		},
 		get text(){
@@ -130,7 +150,9 @@ operation_HTML_ID_Map[consts.sub] =  '#op_sb';
 				// raise error
 			}
 		},
-
+		////////////////////////////////////////////////////////////////////////////
+		// Functions
+		////////////////////////////////////////////////////////////////////////////
 		switch_operation_order: function(){
 			if (this.type_ !== consts.OPERATIONAL){
 				throw new Error('Node does not support operation type.');
@@ -149,11 +171,13 @@ operation_HTML_ID_Map[consts.sub] =  '#op_sb';
 		get_node_values: function(time){
 			// UNIMPLEMENTED
 		},
-		
 	};
 
-node = new Node(0,0,0);
+node = new Node({id:0,x:0,y:0});
 node.type_ = 2;
 console.log(node.type);
 console.log(node.name_);
 console.log(node.text);
+
+json = node.toJSON();
+node2 = new Node(JSON.parse(json));
