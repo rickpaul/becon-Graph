@@ -1,0 +1,92 @@
+svg {
+	background-color: #333;
+	cursor: default;
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	-o-user-select: none;
+	user-select: none;
+}
+svg.input_box {
+	background-color: #111;
+	cursor: default;
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	-o-user-select: none;
+	user-select: none;
+}
+
+svg:not(.active):not(.ctrl) {
+	cursor: crosshair;
+}
+
+svg:not(.active):not(.ctrl) path.link {
+	cursor: pointer;
+}
+
+path.link {
+	fill: none;
+	stroke: #000;
+	stroke-width: 3px;
+	cursor: default;
+}
+
+path.link:hover{
+	stroke: rgb(94, 196, 204);
+}
+
+path.link.selected {
+	stroke-dasharray: 10,2;
+	/*animation: dash 5s linear;*/
+}
+/*@keyframes dash {
+	to {
+		stroke-dashoffset: 1000;
+	}
+}*/
+
+path.link.dragline {
+	pointer-events: none;
+}
+
+path.link.hidden {
+	stroke-width: 0;
+}
+circle.node {
+	stroke-width: 4px;
+	cursor: pointer;
+}
+circle.node.selected {
+	stroke-dasharray: 10,2;
+}
+/*
+input.disabled {
+	fill: #655;
+}
+*/
+text {
+	font: 12px sans-serif;
+	pointer-events: none;
+}
+
+text.circle-id {
+	text-anchor: middle;
+	font-weight: bold;
+}
+/*
+.reveal-if-active {
+	opacity: 0;
+	max-height: 0;
+	overflow: hidden;
+	transform: scale(0.8);
+	transition: 0.5s;
+	input[type='radio']:checked ~ &,
+	input[type='checkbox']:checked ~ & {
+		opacity: 1;
+		max-height: 100px;
+		overflow: visible;
+		padding: 10px 20px;
+		transform: scale(1);
+	}
+}*/
