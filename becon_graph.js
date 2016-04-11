@@ -46,22 +46,15 @@ var consts =  {
 	OPERATIONAL: 2,
 	INPUT: 3,
 	OUTPUT: 4,
-	CONCEPT_META_KEYS: ['fn_type'],
-	OPERATIONAL_META_KEYS: ['op', 'inp_1', 'inp_2'],
-	INPUT_META_KEYS: ['inp_src', 'earliest_date', 'latest_date', 'periodicity'],
-	OUTPUT_META_KEYS: ['out_tgt'],
 	add: 'ad',
 	sub: 'sb',
-	mlt: 'ml',
+	mul: 'ml',
 	div: 'dv',
 	gt:  'gt',
 	lt:  'lt',
-	// addID: 'op_ad',
-	// subID: 'op_sb',
-	// mltID: 'op_ml',
-	// divID: 'op_dv',
-	// gtID: 'op_gt',
-	// ltID: 'op_lt',
+	DEFAULT: -1,
+	SOURCE: 'source',
+	SCALAR: 'scalar',
 };
 
 // Color Generation:
@@ -87,10 +80,15 @@ colors_darker[consts.INPUT] = '#B25809';
 colors_darker[consts.OUTPUT] = '#1E701E';
 
 var node_default = {};
-node_default['node_name_prefix'] = 'node_';
-node_default['node_type'] = consts.CONCEPT;
-node_default['op_type'] = consts.add;
-
+node_default.node_name_prefix = 'node_';
+node_default.node_type = consts.CONCEPT;
+node_default.operation_type = consts.add;
+node_default.concept_aggregation = consts.real_valued;
+// node_default.concept_aggregation = consts.logistic;
+node_default.input_source = consts.random;
+node_default.output_target = consts.console;
+node_default.earliest_date = 0;
+node_default.latest_date = 0;
 var graph;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -101,9 +99,14 @@ var graph;
 ////////////////////////////////////////////////////////////////////////////////
 var node_type_HTML_ID_Map = {};
 node_type_HTML_ID_Map[consts.CONCEPT] = '#node-type-concept';
-node_type_HTML_ID_Map[consts.CONCEPT] = '#node-type-input';
-node_type_HTML_ID_Map[consts.CONCEPT] = '#node-type-operational';
-node_type_HTML_ID_Map[consts.CONCEPT] = '#node-type-output';
+node_type_HTML_ID_Map[consts.INPUT] = '#node-type-input';
+node_type_HTML_ID_Map[consts.OPERATIONAL] = '#node-type-operational';
+node_type_HTML_ID_Map[consts.OUTPUT] = '#node-type-output';
+var HTML_ID_node_type_Map = {};
+node_type_HTML_ID_Map['node-type-concept'] = consts.CONCEPT;
+node_type_HTML_ID_Map['node-type-input'] = consts.INPUT;
+node_type_HTML_ID_Map['node-type-operational'] = consts.OPERATIONAL;
+node_type_HTML_ID_Map['node-type-output'] = consts.OUTPUT;
 var operation_HTML_ID_Map = {};
 operation_HTML_ID_Map[consts.add] = '#op_ad';
 operation_HTML_ID_Map[consts.sub] = '#op_sb';
@@ -111,35 +114,64 @@ operation_HTML_ID_Map[consts.mul] = '#op_ml';
 operation_HTML_ID_Map[consts.div] = '#op_dv';
 operation_HTML_ID_Map[consts.gt] = '#op_gt';
 operation_HTML_ID_Map[consts.lt] = '#op_lt';
+var HTML_ID_operation_Map = {};
+HTML_ID_operation_Map['#op_ad'] = consts.add;
+HTML_ID_operation_Map['#op_sb'] = consts.sub;
+HTML_ID_operation_Map['#op_ml'] = consts.mul;
+HTML_ID_operation_Map['#op_dv'] = consts.div;
+HTML_ID_operation_Map['#op_gt'] = consts.gt;
+HTML_ID_operation_Map['#op_lt'] = consts.lt;
 
-function WEB_hide_graph_control(){ $('#graph-holder').hide(); }
-function WEB_show_graph_control() { $('#graph-holder').show(); }
-function WEB_show_operation_node_subform() { 
-	console.log('WEB_show_operation_node_subform');
+
+function WEB_handle_save_graph(){
+	localStorage.setItem('graph', this.toJSON());
+}
+function WEB_handle_run_graph(){
+	// Do nothing
+}
+function WEB_handle_check_graph(){
+	// Do nothing
+}
+function WEB_hide_graph_control() {
+	// console.log('WEB_hide_graph_control');
+ $('#graph-control-holder').hide(); }
+function WEB_show_graph_control() { 
+	// console.log('WEB_show_graph_control');
+	$('#graph-control-holder').show(); }
+function WEB_show_operation_node_subform() {
 	// Show Subform
 	$('#operation_subform').show(); 
-	// Select Previous Operation
-	var radio_id = graph.selected_node.operation_type
+	// Find and Fill Operation Type
+	var radio_id = operation_HTML_ID_Map[graph.selected_node.operation_type];
+	console.log(radio_id);
 	$(radio_id).prop('checked', true);
+	// Find and Fill Operation Sources
+	$('#op-left-source-select').val(graph.selected_node.operation_left);
+	$('#op-rght-source-select').val(graph.selected_node.operation_right);
 }
 function WEB_hide_operation_node_subform() { $('#operation_subform').hide(); }
 function WEB_show_concept_node_subform() { $('#concept_value_subform').show(); }
 function WEB_hide_concept_node_subform() { $('#concept_value_subform').hide(); }
-function WEB_show_input_node_subform() { $('#input_select_subform').show(); }
+function WEB_show_input_node_subform() { 
+	// Show Subform
+	$('#input_select_subform').show(); 
+	// Find and Fill Input Value
+	$('#input-source-select').val(graph.selected_node.input_source);
+}
 function WEB_hide_input_node_subform() { $('#input_select_subform').hide(); }
 
 function WEB_show_edge_form() {
-	console.log('WEB_show_edge_form');
+	// console.log('WEB_show_edge_form');
 	// Remove Other Forms
 	WEB_hide_node_form();
 	WEB_hide_graph_control();
-	// Show Appropriate Subforms
-	WEB_show_edge_subforms();
 	// Show Edge Form
 	$('#edge-form-holder').show();
+	// Show Appropriate Subforms
+	WEB_show_edge_subforms();	
 }
 function WEB_hide_edge_form() {
-	console.log('WEB_hide_edge_form');
+	// console.log('WEB_hide_edge_form');
 	// Collapse Edge Form
 	$('#edge-form-holder').hide();
 	// Collapse Edge Subforms
@@ -148,23 +180,23 @@ function WEB_hide_edge_form() {
 	WEB_show_graph_control();
 }
 function WEB_show_edge_subforms() {
-	console.log('WEB_show_edge_subforms');
+	// console.log('WEB_show_edge_subforms');
 	// Do Nothing
 }
 function WEB_hide_edge_subforms() {
-	console.log('WEB_hide_edge_subforms');
+	// console.log('WEB_hide_edge_subforms');
 	$('#really-delete-edge-button').hide();
 }
 
 function WEB_show_node_form() {
 	console.log('WEB_show_node_form');
 	// Remove Other Forms
-	WEB_hide_graph_control();
-	WEB_hide_edge_form();
+	WEB_hide_edge_form(); // needs to be this ...
+	WEB_hide_graph_control(); // ... order
 	// Set Node Name box to Appropriate Value
-	$('#node-name-input').val(graph.selected_node.node_name);
+	$('#node-name-input').val(graph.selected_node.name_);
 	// Set Checkbox to Appropriate Value
-	var radio_id = graph.selected_node.type;
+	var radio_id = node_type_HTML_ID_Map[graph.selected_node.type_];
 	$(radio_id).prop('checked', true);
 	// Show the Form
 	$('#node-form-holder').show();
@@ -187,7 +219,7 @@ function WEB_hide_node_subforms() {
 	WEB_hide_operation_node_subform();
 	WEB_hide_concept_node_subform();
 	WEB_hide_input_node_subform();
-	$('#really-delete-node-input').hide();
+	$('#btn_delete_node_confirm').hide();
 }
 function WEB_show_node_subforms()
 {
@@ -196,29 +228,28 @@ function WEB_show_node_subforms()
 	WEB_hide_node_subforms();
 	// Get Node Type
 	var node_type = $('input[name=node_type_radio]:checked', '#update-node-form').attr('id');
-	console.log(node_type);
 	if(node_type === 'node-type-concept'){
 		// Show Relevant Form
 		WEB_show_concept_node_subform();
 		// Preview Change
-		graph.selected_node.type = consts.CONCEPT;
+		// graph.selected_node.type = consts.CONCEPT;
 	} else if(node_type === 'node-type-input'){
 		// Show Relevant Form
 		WEB_show_input_node_subform();
 		// Preview Change
-		graph.selected_node.type = consts.INPUT;
+		// graph.selected_node.type = consts.INPUT;
 	} else if(node_type === 'node-type-operational'){
 		// Preview Change
-		graph.selected_node.type = consts.OPERATIONAL;
+		// graph.selected_node.type = consts.OPERATIONAL;
 		// Show Relevant Form
 		WEB_show_operation_node_subform();
 	} else if(node_type === 'node-type-output'){
 		 // Preview Change
-		graph.selected_node.type = consts.OUTPUT;
+		// graph.selected_node.type = consts.OUTPUT;
 	} else{
-		console.log('ERROR: Node Type not recognized');
+		throw new Error('Node Type not recognized');
 	};
-		graph.update_graph();
+	// graph.update_graph();
 }
 
 function WEB_populate_input_select_box(){
@@ -227,10 +258,23 @@ function WEB_populate_input_select_box(){
 		success: function(data){
 				$(data).find('a:contains(.json)').each(function(){
 					var input_file = $(this).attr('href');
-					$('<option></option>').html(input_file).appendTo('#input-source-select');
+					$('<option value='+input_file+'>'+input_file+'</option>').appendTo('#input-source-select');
 			});
 		}
 	});
+}
+
+function WEB_handle_operation_switch(){
+	graph.selected_node.switch_operation_order();
+}
+function WEB_populate_operation_inputs(){
+	graph.selected_node.populate_operation_inputs();
+}
+function WEB_handle_right_op_select(){
+	graph.selected_node.operation_right = parseInt($('#op-rght-source-select').val());
+}
+function WEB_handle_left_op_select(){
+	graph.selected_node.operation_left = parseInt($('#op-left-source-select').val());
 }
 
 function web_graph_mode_change_handle(){
@@ -241,16 +285,18 @@ function web_graph_mode_change_handle(){
 		graph.node_placement_mode = true;
 	}
 }
-function WEB_handle_operation_change(){
-	var operation_type = $('input[name=operation_radio]:checked', '#update-node-form').val();
-	graph.selected_node.node_meta['op'] = operation_type;
-	graph.update_graph();
-}
+// function WEB_handle_operation_change(){
+	// Do Nothing
+	// var operation_type = $('input[name=operation_radio]:checked', '#update-node-form').val();
+	// graph.selected_node.operation_type = operation_type;
+	// graph.update_graph();
+// }
+
 function web_graph_mode_set_mode_move() {
 	$('#graph-control-move').prop('checked', true);
 	graph.node_placement_mode = false;
 }
-function web_graph_mode_set_mode_place() {
+function WEB_set_graph_control_node_placement_mode() {
 	$('#graph-control-add-node').prop('checked', true);
 	graph.node_placement_mode = true;
 }
@@ -274,30 +320,34 @@ function check_node_name_input(node_name) {
 	)
 }
 
-function web_handle_node_delete(event) {
-	$('#delete-node-input').prop('disabled', true); // TODO: Not Working
-	$('#really-delete-node-input').show();
+function WEB_handle_node_delete(event) {
+	$('#btn_delete_node').prop('disabled', true); // TODO: Not Working
+	$('#btn_delete_node_confirm').show();
 }
-function web_handle_node_delete_really(event) {
+function WEB_handle_node_delete_really(event) {
 	graph.node_delete(graph.selected_node);
 }
 function web_handle_edge_delete(event) {
-	$('#delete-edge-input').prop('disabled', true); // TODO: Not Working
-	$('#really-delete-edge-input').show();
+	'use strict'
+	$('#delete-edge-button').prop('disabled', true); // TODO: Not Working
+	$('#really-delete-edge-button').show();
 }
 function web_handle_edge_delete_really(event) {
+	'use strict'
 	graph.edge_delete(graph.selected_edge);
 }
-function web_handle_cancel(event)
+function WEB_handle_node_cancel(event)
 {
+	'use strict'
 	event.preventDefault();
 	WEB_hide_node_form();
 	return false;
 }
-function web_handle_submit(event)
+function WEB_handle_node_submit(event)
 {
+	'use strict'
 	event.preventDefault();
-	if(graph.selected_node == null){ return false; } // TODO: Never hits this...
+	// if(graph.selected_node == null){ return false; } // TODO: Should Never hit this...
 	// Check Node Name
 	var node_name_obj = $('#node-name-input')
 	var node_name = node_name_obj.val();
@@ -309,19 +359,31 @@ function web_handle_submit(event)
 		return false;
 	}
 	// Check for Duplicate Name
-	node_names = d3.values(graph.nodes).map(function(d){return d.node_name;});
-	console.log(node_names);
-	if (graph.selected_node.node_name != node_name && node_names.indexOf(node_name) >= 0 )
+	var node_names = d3.values(graph.nodes).map(function(d){return d.name_;});
+	if (graph.selected_node.name_ != node_name && node_names.indexOf(node_name) >= 0 )
 	{
 		web_effect_require_resubmit(node_name_obj, 'Please Enter Unique Node Name');
 		return false;
 	}
-	graph.selected_node.node_name = node_name;
+	graph.selected_node.name_ = node_name;
 	
 	// Save Node Type
-	// TODO: This is already being done.
 	var node_type = $('input[name=node_type_radio]:checked', '#update-node-form').val();
-	graph.selected_node.node_type = node_type;
+	node_type = parseInt(node_type);
+	graph.selected_node.type_ = node_type;
+	// Save Node Metadata
+	if(node_type === consts.CONCEPT){
+		
+	} else if(node_type === consts.INPUT){
+		graph.selected_node.input_source = $('#input-source-select').val();
+	} else if(node_type === consts.OPERATIONAL){
+		graph.selected_node.operation_left = parseInt($('#op-left-source-select').val());
+		graph.selected_node.operation_right = parseInt($('#op-rght-source-select').val());
+		graph.selected_node.operation_type = $('input[name=operation_radio]:checked', '#update-node-form').val();
+	} else if(node_type === consts.OUTPUT){
+	} else {
+		throw new Error('Node Type not recognized');
+	}
 
 	// Clean Up
 	console.log('Node Information Submitted.');
@@ -382,16 +444,26 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 	// Array Dictionary Object (For Holding Edge Relationships)
 	//////////////////////////////////////////////////////////////////////////////
 	var Array_Dictionary = function(){
+		'use strict'
 		// Basically a hash table where the key links to an array
 		this.dict = {};
 	}
 	Array_Dictionary.prototype.add = function(key, value) {
+		'use strict'
 		if(!this.dict[key]){
 			this.dict[key] = [];
 		}
 		this.dict[key].push(value);
 	};
+	Array_Dictionary.prototype.get = function(key) {
+		'use strict'
+		if(!this.dict[key]){
+			throw new Error('Key not found');
+		}
+		return this.dict[key];
+	};
 	Array_Dictionary.prototype.delete = function(key, value) {
+		'use strict'
 		if(!this.dict[key]){
 			throw new Error('Key not found');
 		}
@@ -401,6 +473,7 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 		}
 	};
 	Array_Dictionary.prototype.exists = function(key, value) {
+		'use strict'
 		if(!this.dict[key]){
 			return false;
 		}
@@ -410,28 +483,68 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 	// Node Object
 	//////////////////////////////////////////////////////////////////////////////
 	var Node = function(params){
-		this.id = params.id;
-		this.name_ = params.name_ || node_default.node_name_prefix + this.id;
-		this.type_ = params.type_ || node_default.node_type;
-		this.x = params.x;
-		this.y = params.y;
-		this.in_data = {};
-		this.out_data = {};
+		'use strict'
+		this.fromSimpleObject(params);
+		this.in_data = {}; // UNIMPLEMENTED
+		this.out_data = {}; // UNIMPLEMENTED
 	};
 	Node.prototype = {
 		////////////////////////////////////////////////////////////////////////////
 		// JSON Functions
 		////////////////////////////////////////////////////////////////////////////
+		fromSimpleObject: function(params){
+			'use strict'
+			// Universal Params
+			this.id = params.id;
+			this.name_ = params.name_ || node_default.node_name_prefix + this.id;
+			this.type = params.type_ || node_default.node_type;
+			this.x = params.x;
+			this.y = params.y;
+			// Concept Params
+			if(params.concept_aggregation) {this.concept_aggregation = params.concept_aggregation;}
+			// Input Params
+			if(params.input_source_) {this.input_source_ = params.input_source_;}
+			if(params.input_scalar_) {this.input_scalar_ = params.input_scalar_;}
+			if(params.earliest_date) {this.earliest_date = params.earliest_date;}
+			if(params.latest_date) {this.latest_date = params.latest_date;}
+			if(params.periodicity) {this.latest_date = params.latest_date;}
+			// Operation Params
+			if(params.operation_type) {this.operation_type = params.operation_type;}
+			if(params.operation_left) {this.operation_left = params.operation_left;}
+			if(params.operation_right) {this.operation_right = params.operation_right;}
+			// Output Params
+			if(params.output_target) {this.output_target = params.output_target;}
+		},
 		toSimpleObject: function(){
-			return {
+			'use strict'
+			var save_params = {
 				id: this.id,
 				name_: this.name_,
 				type_: this.type_,
 				x: this.x,
 				y: this.y
 			};
+			if(this.type === consts.CONCEPT){
+				save_params.concept_aggregation = this.concept_aggregation;
+			} else if(this.type === consts.INPUT){
+				save_params.input_source_ = this.input_source_;
+				save_params.input_scalar_ = this.input_scalar_;
+				save_params.earliest_date = this.earliest_date;
+				save_params.latest_date = this.latest_date;
+				save_params.periodicity = this.periodicity;
+			} else if(this.type === consts.OPERATIONAL){
+				save_params.operation_type = this.operation_type;
+				save_params.operation_left = this.operation_left;
+				save_params.operation_right = this.operation_right;
+			} else if(this.type === consts.OUTPUT){
+				save_params.output_target = this.output_target;
+			} else {
+				throw new Error('Node Type not recognized');
+			}
+			return save_params;
 		},
 		toJSON: function(){
+			'use strict'
 			return JSON.stringify(
 				this.toSimpleObject()
 			);
@@ -440,53 +553,72 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 		// Setter Functions
 		////////////////////////////////////////////////////////////////////////////
 		set type(new_type){
+			'use strict'
+			console.log('setting node type');
 			if (new_type === this.type_) {return;}
-			if (this.type_ === consts.CONCEPT){
-				// Delete Old Metadata
-				// Set New Metadata
-			} else if (this.type_ === consts.INPUT){
-			} else if (this.type_ === consts.OUTPUT){
-			} else if (this.type_ === consts.OPERATIONAL){
+			if (new_type === consts.CONCEPT){
+				if(!this.concept_aggregation) {this.concept_aggregation = node_default.concept_aggregation}
+			} else if (new_type === consts.INPUT){
+				if(!this.input_source_) {this.input_source_ = node_default.input_source}
+				if(!this.input_scalar_) {this.input_scalar_ = node_default.input_scalar}
+				if(!this.earliest_date) {this.earliest_date = node_default.earliest_date}
+				if(!this.latest_date) {this.latest_date = node_default.latest_date}
+				if(!this.periodicity) {this.latest_date = node_default.latest_date}
+			} else if (new_type === consts.OUTPUT){
+				if(!this.output_target) {this.output_target = node_default.output_target}
+			} else if (new_type === consts.OPERATIONAL){
+				if(!this.operation_type) {this.operation_type = node_default.operation_type;}
+				if(!this.operation_left) {this.operation_left = consts.DEFAULT;}
+				if(!this.operation_right) {this.operation_right = consts.DEFAULT;}
 			}
 			this.type_ = new_type;
 		},
-		set operation_type(value){
-			if (this.type_ !== consts.OPERATIONAL){
-				throw new Error('Node does not support operation type.');
-			}
-			this.op_type = value;
+		set input_source(input_source) {
+			'use strict'
+			this.input_source_ = input_source;
+			this.input_mode_ = consts.SOURCE;
+		},
+		set input_scalar(input_scalar) {
+			'use strict'
+			this.input_scalar_ = input_scalar;
+			this.input_mode_ = consts.SCALAR;
 		},
 		////////////////////////////////////////////////////////////////////////////
 		// Getter Functions
 		////////////////////////////////////////////////////////////////////////////
+		get id_(){
+			'use strict'
+			return this.id_;
+		},
+		get input_source() {
+			'use strict'
+			return this.input_source_;
+		},
+		get input_scalar() {
+			'use strict'
+			return this.input_scalar_;
+		},
+		get input_mode() {
+			'use strict'
+			return this.input_mode_;
+		},
 		get type(){
+			'use strict'
 			return this.type_;
 		},
-		get operation_type(){
-			if (this.type_ !== consts.OPERATIONAL){
-				throw new Error('Node does not support operation type.');
-			}
-			if (!this.op_type){
-				this.op_type = node_default.op_type;
-			}
-			return this.op_type;
-		},
-		get operation_left(){
-			// UNIMPLEMENTED
-		},
-		get operation_right(){
-			// UNIMPLEMENTED
-		},
 		get fill_color(){
+			'use strict'
 			return colors[this.type_];
 		},
 		get select_color(){
+			'use strict'
 			return colors_brighter[this.type_];
 		},
-		get stroke_color(){
-			return colors_darker[this.type_];
-		},
+		get stroke_color(){ 
+			'use strict' 
+			return colors_darker[this.type_]; },
 		get text(){
+			'use strict'
 			if ( this.type_ === consts.CONCEPT ) {
 				return this.name_;
 			} else if ( this.type_ === consts.INPUT ) {
@@ -496,35 +628,113 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 			} else if ( this.type_ === consts.OPERATIONAL ) {
 				return (this.name_ + ' : ' + this.operation_type);
 			} else {
-				// raise error
+				throw new Error('Node Type not recognized');
 			}
 		},
 		////////////////////////////////////////////////////////////////////////////
 		// Functions
 		////////////////////////////////////////////////////////////////////////////
 		switch_operation_order: function(){
-			if (this.type_ !== consts.OPERATIONAL){
-				throw new Error('Node does not support operation type.');
+			'use strict'
+			if (typeof(this.operation_left)==='undefined' || typeof(this.operation_right)==='undefined'){
+				console.log('Operation node missing inputs.');
+				return;
 			}
-			if (!this.operation_left || !this.operation_right){
-				throw new Error('Operation node missing inputs.');
-			}
-			// UNIMPLEMENTED
+			// var temp = this.operation_left;
+			// this.operation_left = this.operation_right;
+			// this.operation_right = temp;
+			// Only switch visual (save will happen when we save)
+			$('#op-rght-source-select').val(this.operation_left);
+			$('#op-left-source-select').val(this.operation_right);
+		},
+		populate_operation_inputs: function(){
+			// this.input_node_map = {}; // Can delete?
+			var this_node = this;
+			var input_node;
+			var input_node_name;
+			var in_node_ids = graph.edges_by_target.get(this.id);
+			$("#op-rght-source-select").empty();
+			$("#op-left-source-select").empty();
+			$('<option value='+consts.DEFAULT+' selected>- choose -</option>').appendTo('#op-rght-source-select');
+			$('<option value='+consts.DEFAULT+' selected>- choose -</option>').appendTo('#op-left-source-select');
+			in_node_ids.forEach( function(d){
+				input_node_name = graph.nodes[d].name_;
+				// this_node.input_node_map[input_node_name] = d;  // Can delete?
+				$('<option value='+d+'></option>').html(input_node_name).appendTo('#op-rght-source-select');
+				$('<option value='+d+'></option>').html(input_node_name).appendTo('#op-left-source-select');
+			});
+			this.operation_left = consts.DEFAULT;
+			this.operation_right = consts.DEFAULT;
 		},
 		check_node_name: function(new_name){
+			'use strict'
 			// UNIMPLEMENTED
 		},
-		get_node_time_stats: function(){
+		get earliestDate(){
+			'use strict'
+			if( typeof(this.earliest_date)!=='undefined' ) {
+				return this.earliest_date;
+			} else if ( this.type_ === consts.INPUT ) {
+				this.load_data();
+				return this.earliest_date;
+			} else {
+				var source_node_ids = graph.edges_by_target.get(this.id);
+				var source_node;
+				return d3.max(source_node_ids.map(function(d){
+					source_node = graph.nodes[d].earliest_date
+				}));
+			}
+		},
+		get latestDate(){
+			'use strict'
+			if( typeof(this.latest_date)!=='undefined' ) {
+				return this.latest_date;
+			} else if ( this.type_ === consts.INPUT ) {
+				this.load_data();
+				return this.latest_date;
+			} else {
+				var source_node_ids = graph.edges_by_target.get(this.id);
+				var source_node;
+				return d3.min(source_node_ids.map(function(d){
+					source_node = graph.nodes[d].latest_date
+				}));
+			}
+		},
+		get periodicity(){
+			'use strict'
 			// UNIMPLEMENTED
 		},
-		get_node_values: function(time){
-			// UNIMPLEMENTED
+		load_data: function(){
+			'use strict'
+			if ( this.type_ !== consts.INPUT ) {
+				throw new Error('Improper Load Attempt');
+			}
+			if ( this.input_mode === consts.SCALAR ) {
+				this.latest_date = null; // UNIMPLEMENTED
+				this.earliest_date = null; // UNIMPLEMENTED
+				this.periodicity = null; // UNIMPLEMENTED
+			} else if ( this.input_mode === consts.SOURCE ) {
+				// UNIMPLEMENTED
+				d3.json(filePrefix+this.input_file, function(error, data){
+					if (error) { callback(error, false) };
+					pc_data = data;
+					pc_data.forEach(function(d) {
+						d.date = parseDate(d.dt);
+						d.value = +d.vl;
+					});
+					callback(null, true);        
+				});
+				this.latest_date = null; // UNIMPLEMENTED
+				this.earliest_date = null; // UNIMPLEMENTED
+				this.periodicity = null; // UNIMPLEMENTED
+			}
 		},
 	};
 	//////////////////////////////////////////////////////////////////////////////
 	// Graph Object
 	//////////////////////////////////////////////////////////////////////////////
 	var Graph = function(svg_, nodes_, edges_){
+		'use strict'
 		////////////////////////////////////////////////////////////////////////////
 		// Graph State Variables
 		////////////////////////////////////////////////////////////////////////////
@@ -652,6 +862,7 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 		// JSON Functions
 		////////////////////////////////////////////////////////////////////////////
 		toJSON: function(){
+			'use strict'
 			var nodes_obj = {};
 			d3.entries(this.nodes).map(function(d){
 				nodes_obj[d.key] = d.value.toSimpleObject();
@@ -672,7 +883,7 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 			var w = window.innerWidth || docEl.clientWidth || bodyEl.clientWidth;
 			var h = window.innerHeight || docEl.clientHeight || bodyEl.clientHeight;
 			// set svg width and height
-			h -= 300;
+			h -= 350;
 			svg.attr('width', w).attr('height', h);
 		},
 		zoomed: function() {
@@ -703,6 +914,7 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 			console.log('svg_keyup_handle UNIMPLEMENTED');
 		},
 		svg_mousedown_handle: function(){
+			'use strict'
 			// Clear Node and Edge Selections
 			if (this.selected_node){
 				this.node_deselect();
@@ -712,14 +924,19 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 			}
 		},
 		svg_mouseup_handle: function(){
-			console.log('svg_mouseup_handle');
+			'use strict'
+			// console.log('svg_mouseup_handle');
 			if(this.justScaleTransGraph) {
 				this.justScaleTransGraph = false;
 			} else if (this.node_placement_mode) {
 				// Create and Add New Node
 				var loc = d3.mouse(this.svg_group.node());
 				this.id_ct++;
-				this.nodes[this.id_ct] = new Node(loc[0], loc[1], this.id_ct);
+				this.nodes[this.id_ct] = new Node({
+					x:loc[0], 
+					y:loc[1], 
+					id:this.id_ct
+				});
 				// Change Graph Mode to Move Mode
 				web_graph_mode_set_mode_move();
 				// Update and Return
@@ -731,6 +948,7 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 
 		},
 		path_mousedown_handle: function(d3path, d){
+			'use strict'
 			// prevent default
 			d3.event.stopPropagation();
 			if(this.node_placement_mode){ return; }
@@ -754,6 +972,7 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 			}
 		},
 		circle_dragmove_handle: function(d){
+			'use strict'
 			// Handles Circle Drags
 			// console.log('dragmove');
 			graph.just_dragged = true;
@@ -767,7 +986,8 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 			}
 		},
 		circle_mousedown_handle: function(d3_circle_under, node_under){
-			if(run_instructions.verbose){console.log('circle_mousedown_handle');}
+			'use strict'
+			// if(run_instructions.verbose){console.log('circle_mousedown_handle');}
 			// prevent default
 			d3.event.stopPropagation();
 			if(this.node_placement_mode){ return; }
@@ -790,7 +1010,8 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 			}
 		},
 		circle_mouseup_handle: function(d3_circle_under, node_under){
-			if(run_instructions.verbose){console.log('circle_mouseup_handle');}
+			'use strict'
+			// if(run_instructions.verbose){console.log('circle_mouseup_handle');}
 			// d3.event.stopPropagation(); // Do not prevent default!
 			this.shiftNodeDraw = false;
 			d3_circle_under.classed('connect-node', false);
@@ -806,8 +1027,8 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 				} else {
 					var source_node_id = this.mousedown_node.id;
 					var target_node_id = node_under.id;
-					var source_node_type = this.mousedown_node.node_type;
-					var target_node_type = node_under.node_type;
+					var source_node_type = this.mousedown_node.type_;
+					var target_node_type = node_under.type_;
 					// Handle Edge Dragging / Dragging to New Node / Add New Edge / Error Handling
 					var error = this.check_new_edge_validity(source_node_id, target_node_id, source_node_type, target_node_type)
 					// Handle Edge Dragging / Dragging to New Node / Add New Edge
@@ -824,6 +1045,7 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 			this.mousedown_node = null;
 		},
 		check_new_edge_validity: function(source_node_id, target_node_id, source_node_type, target_node_type) {
+			'use strict'
 			if (source_node_type === consts.OUTPUT) {
 				return 'Output nodes cannot pass along data';
 			} else if (target_node_type === consts.INPUT) {
@@ -840,6 +1062,7 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 			return null;
 		},
 		edge_delete: function(edge){
+			'use strict'
 			// Remove Select
 			this.edge_deselect();
 			// Delete Edge
@@ -848,11 +1071,13 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 			this.update_graph();
 		},
 		edge_delete_link: function(edge){
+			'use strict'
 			this.edges.splice(this.edges.indexOf(edge),1);
 			this.edges_by_source.delete(edge.source, edge.target);
 			this.edges_by_target.delete(edge.target, edge.source);
 		},
 		node_delete: function(node){
+			'use strict'
 			// Remove Select
 			this.node_deselect();
 			// Delete Node
@@ -863,6 +1088,7 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 			this.update_graph();
 		},
 		node_delete_associated_edges: function(delete_node_id){
+			'use strict'
 			// Find Edges
 			var delete_edges = this.edges.filter(function(edge){
 				return (edge.source === delete_node_id || edge.target === delete_node_id);
@@ -873,7 +1099,8 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 			});
 		},
 		node_select: function(d3path, d){
-			console.log('node_select');
+			'use strict'
+			// console.log('node_select');
 			// Change Node State Variables
 			this.selected_node = d;
 			this.selected_node_circle = d3path;
@@ -888,7 +1115,8 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 			WEB_show_node_form();
 		},
 		node_deselect: function(){
-			console.log('node_deselect');
+			'use strict'
+			// console.log('node_deselect');
 			// Remove Editing Form
 			WEB_hide_node_form();
 			// Change Node Circle Appearance
@@ -903,7 +1131,8 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 			this.selected_node_circle = null;
 		},
 		edge_select: function(d3path, d){
-			console.log('edge_select');
+			'use strict'
+			// console.log('edge_select');
 			// Change Edge State Variables
 			this.selected_edge = d;
 			this.selected_edge_path = d3path;
@@ -914,7 +1143,8 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 			WEB_show_edge_form();
 		},
 		edge_deselect: function(){
-			console.log('edge_deselect');
+			'use strict'
+			// console.log('edge_deselect');
 			// Remove Editing Form
 			WEB_hide_edge_form();
 			// Change Edge Path Appearance
@@ -925,7 +1155,7 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 			this.selected_edge_path = null;
 		},
 		update_graph_paths: function(){
-			var graph = this;
+			'use strict'
 			// find paths by selecting unique edges
 			this.paths = this.paths.data(this.edges, function(d){
 				return (d.source + '+' + d.target);
@@ -959,6 +1189,7 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 			this.paths.exit().remove();
 		},
 		update_graph_circles: function(){
+			'use strict'
 			// Find Circles
 			this.circles = this.circles.data(d3.values(this.nodes));
 			// Update Existing Nodes
@@ -1007,8 +1238,6 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 					.attr('class', 'node')
 					.attr('r', 48)
 					.style('fill', function(d) { 
-						console.log(d);
-						console.log(d.id);
 						return d.fill_color; })
 					.style('stroke', function(d) { return d.stroke_color; });
 			// Add New Nodes / Add Text
@@ -1023,9 +1252,9 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 			this.circles.exit().remove()
 		},
 		update_graph: function(){
+			'use strict'
 			// Save Current Version of Graph to Session Storage
 			sessionStorage.setItem('graph', this.toJSON());
-			sessionStorage.setItem('nodes', JSON.stringify(this.nodes));
 			// Update Graphs Circles and Edges
 			this.update_graph_circles();
 			this.update_graph_paths();
@@ -1052,7 +1281,11 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 			}
 		},
 		validate_graph: function(){
-			// UNIMPLEMENTED
+			// Input nodes don't have inbound
+			// Input nodes don't have repeated data sources
+			// Output nodes don't have outbound
+			// Operation nodes don't have outbound
+			// Operation nodes don't have repeated data targets
 		},
 		get_graph_time_stats: function(){
 			// UNIMPLEMENTED
@@ -1089,13 +1322,13 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 	// find appropriate width and height
 	var width = window.innerWidth || docEl.clientWidth || bodyEl.clientWidth;
 	var height =  window.innerHeight|| docEl.clientHeight || bodyEl.clientHeight;
-	height -= 300;
+	height -= 350;
 	// create svg and set svg width and height
 	var svg = d3.select('#graph-holder').append('svg')
 				.attr('width', width)
 				.attr('height', height);
 	var stored_session = sessionStorage.getItem('graph');
-	if(stored_session && false){
+	if(stored_session && true){
 		console.log('Loading graph from autosave');
 		graph = Graph.fromJSON(svg, stored_session)
 	} else if(run_instructions.init_dummy){

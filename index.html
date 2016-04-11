@@ -5,25 +5,30 @@
 	<meta name='description' content='beconae@gmail.com'>
 	<title>Econ Model Graph</title>
 <!-- CSS -->
+<!-- CSS / Select2 -->
+	<!-- <link href='https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.2/css/select2.min.css' rel='stylesheet'/> -->
 <!-- CSS / Bootstrap -->
 	<link rel='stylesheet' href='http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css'>
+	<link rel='stylesheet' href='/lib/bootstrap/bootstrap.min.css'>
 <!-- CSS / Custom -->
 	<link rel='stylesheet' href='becon_graph_web.css'>
 	<link rel='stylesheet' href='app.css'>
 <!-- JavaScript -->
 <!-- JavaScript / jQuery  -->
 	<script src='http://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js'></script>
-<!-- JavaScript / jQuery-UI  -->
-	<!-- // <script src='//code.jquery.com/ui/1.11.4/jquery-ui.js'></script> -->
+	<script src='/lib/jquery/jquery.min.js'></script>
 <!-- JavaScript / Bootstrap -->
 	<script src='http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js'></script>
+	<script src='/lib/bootstrap/bootstrap.min.js'></script>
 <!-- JavaScript / D3 -->
 	<script src='https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.12/d3.min.js'></script>
+	<script src='/lib/d3/d3.v3.min.js'></script>
 <!-- JavaScript / Filesaver -->
-	<script src='//cdn.jsdelivr.net/filesaver.js/0.1/FileSaver.min.js'></script>
-<!-- JavaScript / select2 -->
-	<!-- <link href='https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.2/css/select2.min.css' rel='stylesheet'/> -->
+	<!-- script src='//cdn.jsdelivr.net/filesaver.js/0.1/FileSaver.min.js'></script -->
+<!-- JavaScript / Select2 -->
 	<!-- <script src='https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.2/js/select2.min.js'></script> -->
+<!-- JavaScript / jQuery-UI  -->
+	<!-- // <script src='//code.jquery.com/ui/1.11.4/jquery-ui.js'></script> -->
 <!-- Fade In Script -->
 	<script> setTimeout(function(){$('body').fadeIn(500);},0); </script>
 </head>
@@ -33,9 +38,22 @@
 	<div id='slider-holder'>
 	</div>
 	<div id='graph-control-holder'>
-		<div class='radio col-sm-offset-1'>
-			<label class='radio-inline'><input type='radio' name='graph-control-input' id='graph-control-move' value=1 checked='checked'> Move Graph</label>
-			<label class='radio-inline'><input type='radio' name='graph-control-input' id='graph-control-add-node' value=2> Add Node</label>
+		<div class='form-group'>
+			<div class='radio col-sm-offset-1'>
+				<label class='radio-inline'><input type='radio' name='graph-control-input' id='graph-control-move' value=1 checked='checked'> Move Graph</label>
+				<label class='radio-inline'><input type='radio' name='graph-control-input' id='graph-control-add-node' value=2> Add Node</label>
+			</div>
+		</div>
+		<div class='form-group'>
+			<a id='btn_save_graph'>
+				<input class='col-sm-offset-1' type='button' value='Save Graph' />
+			</a>
+			<a id='btn_run_graph'>
+				<input class='col-sm-offset-0' type='button' value='Run Graph' />
+			</a>
+			<a id='btn_check_graph'>
+				<input class='col-sm-offset-0' type='button' value='Check Graph' />
+			</a>
 		</div>
 	</div>
 	<div id='node-form-holder'>
@@ -46,7 +64,7 @@
 			</div>
 			<div class='form-group'>
 				<label class='control-label col-sm-2' for='node-name-input'>Node Description:</label>
-				<textarea class='col-sm-6' rows='3' placeholder='Node Description' required></textarea>
+				<textarea class='col-sm-6' rows='1' placeholder='Node Description' required></textarea>
 			</div>
 			<div class='form-group'>
 				<label class='control-label col-sm-2' for='node_type_radio'>Node Type:</label>
@@ -69,11 +87,16 @@
 				</div>
 				<div>
 					<label class='control-label col-sm-offset-2 col-sm-2' for='operation-order-input'>Operation Order:</label>
-					<p class='col-sm-offset-0 col-sm-1' id='operation-order-left-p'></p>
-					<a class='col-sm-offset-0 col-sm-1' id='switch-operation-ordper'>
+					<!-- <p class='col-sm-offset-0 col-sm-1' id='op-left-source-label'>Left:</p> -->
+					<select class='col-sm-offset-0 col-sm-2' id='op-left-source-select' ></select> 
+					<a class='col-sm-offset-0 col-sm-1' id='switch-operation-order'>
 						<input class='' type='button' value='Switch' />
 					</a> 
-					<p class='col-sm-offset-0 col-sm-1' id='operation-order-rght-p'></p>
+					<!-- <p class='col-sm-offset-0 col-sm-1' id='op-rght-source-label'>Right:</p> -->
+					<select class='col-sm-offset-0 col-sm-2' id='op-rght-source-select' ></select> 
+					<a class='col-sm-offset-0 col-sm-1' id='populate-operation-inputs'>
+						<input class='' type='button' value='Populate' />
+					</a> 
 				</div>
 			</div>
 			<div class='form-group' id='concept_value_subform'>
@@ -88,16 +111,16 @@
 				<select id='input-source-select'></select> 
 			</div>
 			<div class='form-group'>
-				<a id='submit-node-input'>
+				<a id='btn_save_node'>
 					<input class='col-sm-offset-3' type='button' value='Save' />
 				</a>
-				<a id='cancel-node-input'>
+				<a id='btn_cancel_node'>
 					<input class='col-sm-offset-0' type='button' value='Cancel' />
 				</a>
-				<a id='delete-node-input'>
+				<a id='btn_delete_node'>
 					<input class='col-sm-offset-0' type='button' value='Delete' />
 				</a>
-				<a id='really-delete-node-input'>
+				<a id='btn_delete_node_confirm'>
 					<input class='col-sm-offset-0' type='button' value='Really?' />
 				</a>
 			</div>
@@ -129,18 +152,28 @@
 			WEB_populate_input_select_box();
 			WEB_hide_node_form();
 			WEB_hide_edge_form();
-			// WEB_hide_node_subforms();
-			// WEB_hide_edge_subforms();
-			$('#submit-node-input').bind('click', web_handle_submit);
-			$('#cancel-node-input').bind('click', web_handle_cancel);
-			$('#delete-node-input').bind('click', web_handle_node_delete);
-			$('#really-delete-node-input').bind('click', web_handle_node_delete_really);
+			// Graph Controls
+			$('#btn_save_graph').bind('click', WEB_handle_save_graph);
+			$('#btn_run_graph').bind('click', WEB_handle_run_graph);
+			$('#btn_check_graph').bind('click', WEB_handle_check_graph);
+			// Node Controls
+			$('#btn_save_node').bind('click', WEB_handle_node_submit);
+			$('#btn_cancel_node').bind('click', WEB_handle_node_cancel);
+			$('#btn_delete_node').bind('click', WEB_handle_node_delete);
+			$('#btn_delete_node_confirm').bind('click', WEB_handle_node_delete_really);
+			// Edge Controls
 			$('#delete-edge-button').bind('click', web_handle_edge_delete);
 			$('#really-delete-edge-button').bind('click', web_handle_edge_delete_really);
+			// Node Controls
 			$('input[name=node_type_radio]:radio').on('change', WEB_show_node_subforms);
-			$('input[name=operation_radio]:radio').on('change', WEB_handle_operation_change);
 			$('input[name=graph-control-input]:radio').on('change', web_graph_mode_change_handle);
 			// $('#input-source-select').on('change', WEB_load_graph_input
+			// $('input[name=operation_radio]:radio').on('change', WEB_handle_operation_change);
+			// Operation Node Controls
+			$('#switch-operation-order').bind('click', WEB_handle_operation_switch);
+			$('#populate-operation-inputs').bind('click', WEB_populate_operation_inputs);
+			$('#op-rght-source-select').on('change', WEB_handle_right_op_select);
+			$('#op-left-source-select').on('change', WEB_handle_left_op_select);
 		}
 	</script>
 </html>
