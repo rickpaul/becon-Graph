@@ -43,13 +43,13 @@ textarea {
 	font-size: 0.5em;
 }
 input {
-border: 1px dotted #ccc; 
-background: white; 
-font-family: monospace; 
-/*padding: 10px 20px; */
-font-size: 18px; 
-/*margin: 20px 10px 20px 0; */
-color: black;
+	border: 1px dotted #ccc; 
+	background: white; 
+	font-family: monospace; 
+	/*padding: 10px 20px; */
+	font-size: 18px; 
+	/*margin: 20px 10px 20px 0; */
+	color: black;
 }
 input:focus { 
 	background-color:gray; 
@@ -58,7 +58,6 @@ input:focus {
 .radio-inline { 
 	padding-top: 0px !important;
 }
-
 
 #toolbox{
 	position: absolute;

@@ -17,7 +17,6 @@
 // http://tenxer.github.io/xcharts/examples/ graphs and charts
 // http://www.findtheconversation.com/concept-map/
 
-// Use Underscore.js
 
 // Add Save
 // Add Node Tags
@@ -32,6 +31,10 @@
 //////////////////////////////////////////////////////////////////////////////
 // Constants and Globals
 //////////////////////////////////////////////////////////////////////////////
+
+function parseDate(___){
+	return ___;
+}
 
 var consts =  {
 	selectedClass: 'selected',
@@ -56,6 +59,8 @@ var consts =  {
 	SOURCE: 'source',
 	SCALAR: 'scalar',
 };
+
+var filePrefix = '/data/';
 
 // Color Generation:
 // 	colors = d3.scale.category10();
@@ -85,10 +90,20 @@ node_default.node_type = consts.CONCEPT;
 node_default.operation_type = consts.add;
 node_default.concept_aggregation = consts.real_valued;
 // node_default.concept_aggregation = consts.logistic;
+node_default.input_mode = consts.SOURCE;
 node_default.input_source = consts.random;
 node_default.output_target = consts.console;
 node_default.earliest_date = 0;
 node_default.latest_date = 0;
+
+var operation_translator = {};
+operation_translator[consts.add] = '+';
+operation_translator[consts.sub] = '-';
+operation_translator[consts.mul] = '*';
+operation_translator[consts.div] = '/';
+operation_translator[consts.gt] = '>';
+operation_translator[consts.lt] = '<';
+
 var graph;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -124,7 +139,12 @@ HTML_ID_operation_Map['#op_lt'] = consts.lt;
 
 
 function WEB_handle_save_graph(){
-	localStorage.setItem('graph', this.toJSON());
+	localStorage.setItem('graph', graph.toJSON());
+}
+function WEB_handle_load_graph(){
+	var stored_session = localStorage.getItem('graph');
+	graph = Graph.fromJSON(svg, stored_session);
+	graph.update_graph();
 }
 function WEB_handle_run_graph(){
 	// Do nothing
@@ -143,9 +163,9 @@ function WEB_show_operation_node_subform() {
 	$('#operation_subform').show(); 
 	// Find and Fill Operation Type
 	var radio_id = operation_HTML_ID_Map[graph.selected_node.operation_type];
-	console.log(radio_id);
 	$(radio_id).prop('checked', true);
 	// Find and Fill Operation Sources
+	graph.selected_node.populate_operation_inputs();
 	$('#op-left-source-select').val(graph.selected_node.operation_left);
 	$('#op-rght-source-select').val(graph.selected_node.operation_right);
 }
@@ -189,12 +209,11 @@ function WEB_hide_edge_subforms() {
 }
 
 function WEB_show_node_form() {
-	console.log('WEB_show_node_form');
 	// Remove Other Forms
 	WEB_hide_edge_form(); // needs to be this ...
 	WEB_hide_graph_control(); // ... order
 	// Set Node Name box to Appropriate Value
-	$('#node-name-input').val(graph.selected_node.name_);
+	$('#node-name-input').val(graph.selected_node.name);
 	// Set Checkbox to Appropriate Value
 	var radio_id = node_type_HTML_ID_Map[graph.selected_node.type_];
 	$(radio_id).prop('checked', true);
@@ -204,7 +223,6 @@ function WEB_show_node_form() {
 	WEB_show_node_subforms();
 }
 function WEB_hide_node_form() {
-	console.log('WEB_hide_node_form');
 	// Show Default Form
 	WEB_show_graph_control();
 	// Remove any error from node name input
@@ -215,7 +233,6 @@ function WEB_hide_node_form() {
 	$('#node-form-holder').hide();
 } 
 function WEB_hide_node_subforms() {
-	console.log('WEB_hide_node_subforms');
 	WEB_hide_operation_node_subform();
 	WEB_hide_concept_node_subform();
 	WEB_hide_input_node_subform();
@@ -223,7 +240,6 @@ function WEB_hide_node_subforms() {
 }
 function WEB_show_node_subforms()
 {
-	console.log('WEB_show_node_subforms');
 	// Hide All Subforms
 	WEB_hide_node_subforms();
 	// Get Node Type
@@ -359,13 +375,13 @@ function WEB_handle_node_submit(event)
 		return false;
 	}
 	// Check for Duplicate Name
-	var node_names = d3.values(graph.nodes).map(function(d){return d.name_;});
-	if (graph.selected_node.name_ != node_name && node_names.indexOf(node_name) >= 0 )
+	var node_names = d3.values(graph.nodes).map(function(d){return d.name;});
+	if (graph.selected_node.name != node_name && node_names.indexOf(node_name) >= 0 )
 	{
 		web_effect_require_resubmit(node_name_obj, 'Please Enter Unique Node Name');
 		return false;
 	}
-	graph.selected_node.name_ = node_name;
+	graph.selected_node.name = node_name;
 	
 	// Save Node Type
 	var node_type = $('input[name=node_type_radio]:checked', '#update-node-form').val();
@@ -375,7 +391,7 @@ function WEB_handle_node_submit(event)
 	if(node_type === consts.CONCEPT){
 		
 	} else if(node_type === consts.INPUT){
-		graph.selected_node.input_source = $('#input-source-select').val();
+		graph.selected_node.input_source_ = $('#input-source-select').val();
 	} else if(node_type === consts.OPERATIONAL){
 		graph.selected_node.operation_left = parseInt($('#op-left-source-select').val());
 		graph.selected_node.operation_right = parseInt($('#op-rght-source-select').val());
@@ -455,6 +471,10 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 		}
 		this.dict[key].push(value);
 	};
+	Array_Dictionary.prototype.has_key = function(key) {
+		'use strict'
+		return ( typeof(this.dict.key) !== 'undefined' );
+	};
 	Array_Dictionary.prototype.get = function(key) {
 		'use strict'
 		if(!this.dict[key]){
@@ -496,22 +516,23 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 			'use strict'
 			// Universal Params
 			this.id = params.id;
-			this.name_ = params.name_ || node_default.node_name_prefix + this.id;
-			this.type = params.type_ || node_default.node_type;
+			this.name = params.name || node_default.node_name_prefix + this.id;
+			this.type = params.type || node_default.node_type;
 			this.x = params.x;
 			this.y = params.y;
 			// Concept Params
 			if(params.concept_aggregation) {this.concept_aggregation = params.concept_aggregation;}
 			// Input Params
-			if(params.input_source_) {this.input_source_ = params.input_source_;}
-			if(params.input_scalar_) {this.input_scalar_ = params.input_scalar_;}
-			if(params.earliest_date) {this.earliest_date = params.earliest_date;}
-			if(params.latest_date) {this.latest_date = params.latest_date;}
-			if(params.periodicity) {this.latest_date = params.latest_date;}
+			if(typeof(params.input_mode_)!=='undefined') {this.input_mode_ = params.input_mode_;}
+			if(typeof(params.input_source_)!=='undefined') {this.input_source_ = params.input_source_;}
+			if(typeof(params.input_scalar_)!=='undefined') {this.input_scalar_ = params.input_scalar_;}
+			if(typeof(params.earliest_date)!=='undefined') {this.earliest_date = params.earliest_date;}
+			if(typeof(params.latest_date)!=='undefined') {this.latest_date = params.latest_date;}
+			if(typeof(params.periodicity)!=='undefined') {this.periodicity = params.periodicity;}
 			// Operation Params
 			if(params.operation_type) {this.operation_type = params.operation_type;}
-			if(params.operation_left) {this.operation_left = params.operation_left;}
-			if(params.operation_right) {this.operation_right = params.operation_right;}
+			if(typeof(this.operation_left)!=='undefined') {this.operation_left = params.operation_left;}
+			if(typeof(this.operation_right)!=='undefined') {this.operation_right = params.operation_right;}
 			// Output Params
 			if(params.output_target) {this.output_target = params.output_target;}
 		},
@@ -519,24 +540,30 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 			'use strict'
 			var save_params = {
 				id: this.id,
-				name_: this.name_,
-				type_: this.type_,
+				name: this.name,
+				type: this.type_,
 				x: this.x,
 				y: this.y
 			};
-			if(this.type === consts.CONCEPT){
+			if(this.type_ === consts.CONCEPT){
 				save_params.concept_aggregation = this.concept_aggregation;
-			} else if(this.type === consts.INPUT){
-				save_params.input_source_ = this.input_source_;
-				save_params.input_scalar_ = this.input_scalar_;
+			} else if(this.type_ === consts.INPUT){
+				save_params.input_mode_ = this.input_mode_;
+				if(this.input_mode_ === consts.SCALAR){
+					save_params.input_scalar_ = this.input_scalar_;
+				} else if(this.input_mode_ === consts.SOURCE){
+					save_params.input_source_ = this.input_source_;
+				} else {
+					throw new Error('Node Type not recognized');
+				}
 				save_params.earliest_date = this.earliest_date;
 				save_params.latest_date = this.latest_date;
 				save_params.periodicity = this.periodicity;
-			} else if(this.type === consts.OPERATIONAL){
+			} else if(this.type_ === consts.OPERATIONAL){
 				save_params.operation_type = this.operation_type;
 				save_params.operation_left = this.operation_left;
 				save_params.operation_right = this.operation_right;
-			} else if(this.type === consts.OUTPUT){
+			} else if(this.type_ === consts.OUTPUT){
 				save_params.output_target = this.output_target;
 			} else {
 				throw new Error('Node Type not recognized');
@@ -554,54 +581,55 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 		////////////////////////////////////////////////////////////////////////////
 		set type(new_type){
 			'use strict'
-			console.log('setting node type');
 			if (new_type === this.type_) {return;}
+			console.log('Node: set type')
 			if (new_type === consts.CONCEPT){
 				if(!this.concept_aggregation) {this.concept_aggregation = node_default.concept_aggregation}
 			} else if (new_type === consts.INPUT){
-				if(!this.input_source_) {this.input_source_ = node_default.input_source}
-				if(!this.input_scalar_) {this.input_scalar_ = node_default.input_scalar}
-				if(!this.earliest_date) {this.earliest_date = node_default.earliest_date}
-				if(!this.latest_date) {this.latest_date = node_default.latest_date}
-				if(!this.periodicity) {this.latest_date = node_default.latest_date}
+				if(!this.input_mode_) {this.input_mode_ = node_default.input_mode;}
+				// if(!this.input_source_) {this.input_source_ = node_default.input_source;}
+				// if(!this.input_scalar_) {this.input_scalar_ = node_default.input_scalar;}
+				// if(!this.earliest_date) {this.earliest_date = node_default.earliest_date;}
+				// if(!this.latest_date) {this.latest_date = node_default.latest_date;}
+				// if(!this.periodicity) {this.latest_date = node_default.latest_date;}
 			} else if (new_type === consts.OUTPUT){
-				if(!this.output_target) {this.output_target = node_default.output_target}
+				if(!this.output_target) {this.output_target = node_default.output_target;}
 			} else if (new_type === consts.OPERATIONAL){
 				if(!this.operation_type) {this.operation_type = node_default.operation_type;}
-				if(!this.operation_left) {this.operation_left = consts.DEFAULT;}
-				if(!this.operation_right) {this.operation_right = consts.DEFAULT;}
+				if(typeof(this.operation_left)==='undefined') {this.operation_left = consts.DEFAULT;}
+				if(typeof(this.operation_right)==='undefined') {this.operation_right = consts.DEFAULT;}
 			}
 			this.type_ = new_type;
 		},
-		set input_source(input_source) {
+		set input_source(_) {
 			'use strict'
-			this.input_source_ = input_source;
+			this.input_source_ = _;
 			this.input_mode_ = consts.SOURCE;
 		},
-		set input_scalar(input_scalar) {
+		set input_scalar(_) {
 			'use strict'
-			this.input_scalar_ = input_scalar;
+			this.input_scalar_ = _;
 			this.input_mode_ = consts.SCALAR;
 		},
 		////////////////////////////////////////////////////////////////////////////
 		// Getter Functions
 		////////////////////////////////////////////////////////////////////////////
-		get id_(){
-			'use strict'
-			return this.id_;
-		},
-		get input_source() {
-			'use strict'
-			return this.input_source_;
-		},
-		get input_scalar() {
-			'use strict'
-			return this.input_scalar_;
-		},
-		get input_mode() {
-			'use strict'
-			return this.input_mode_;
-		},
+		// get id(){
+		// 	'use strict'
+		// 	return this.id_;
+		// },
+		// get input_source() {
+		// 	'use strict'
+		// 	return this.input_source_;
+		// },
+		// get input_scalar() {
+		// 	'use strict'
+		// 	return this.input_scalar_;
+		// },
+		// get input_mode() {
+		// 	'use strict'
+		// 	return this.input_mode_;
+		// },
 		get type(){
 			'use strict'
 			return this.type_;
@@ -620,13 +648,21 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 		get text(){
 			'use strict'
 			if ( this.type_ === consts.CONCEPT ) {
-				return this.name_;
+				return this.name;
 			} else if ( this.type_ === consts.INPUT ) {
-				return 'IN: ' + this.name_;
+				return 'IN: ' + this.name;
 			} else if ( this.type_ === consts.OUTPUT ) {
-				return 'OUT: ' + this.name_;
+				return 'OUT: ' + this.name;
 			} else if ( this.type_ === consts.OPERATIONAL ) {
-				return (this.name_ + ' : ' + this.operation_type);
+				var left_str = '??';
+				if(typeof(this.operation_left)!=='undefined' && this.operation_left !== consts.DEFAULT) {
+					left_str = (graph.nodes[this.operation_left]).name;
+				}
+				var rght_str = '??';
+				if(typeof(this.operation_right)!=='undefined' && this.operation_right !== consts.DEFAULT) {
+					rght_str = graph.nodes[this.operation_right].name;
+				}
+				return (left_str + ' ' + operation_translator[this.operation_type] + ' ' + rght_str);
 			} else {
 				throw new Error('Node Type not recognized');
 			}
@@ -648,23 +684,23 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 			$('#op-left-source-select').val(this.operation_right);
 		},
 		populate_operation_inputs: function(){
-			// this.input_node_map = {}; // Can delete?
 			var this_node = this;
 			var input_node;
 			var input_node_name;
 			var in_node_ids = graph.edges_by_target.get(this.id);
 			$("#op-rght-source-select").empty();
 			$("#op-left-source-select").empty();
-			$('<option value='+consts.DEFAULT+' selected>- choose -</option>').appendTo('#op-rght-source-select');
-			$('<option value='+consts.DEFAULT+' selected>- choose -</option>').appendTo('#op-left-source-select');
+			$('<option value='+consts.DEFAULT+'>- choose -</option>').appendTo('#op-rght-source-select');
+			$('<option value='+consts.DEFAULT+'>- choose -</option>').appendTo('#op-left-source-select');
 			in_node_ids.forEach( function(d){
-				input_node_name = graph.nodes[d].name_;
-				// this_node.input_node_map[input_node_name] = d;  // Can delete?
+				input_node_name = graph.nodes[d].name;
 				$('<option value='+d+'></option>').html(input_node_name).appendTo('#op-rght-source-select');
 				$('<option value='+d+'></option>').html(input_node_name).appendTo('#op-left-source-select');
 			});
-			this.operation_left = consts.DEFAULT;
-			this.operation_right = consts.DEFAULT;
+			if (typeof(this.operation_left)==='undefined') {this.operation_left = consts.DEFAULT;}
+			if (typeof(this.operation_right)==='undefined'){this.operation_right = consts.DEFAULT;}
+			$('#op-left-source-select').val(this.operation_left);
+			$('#op-rght-source-select').val(this.operation_right);
 		},
 		check_node_name: function(new_name){
 			'use strict'
@@ -672,61 +708,68 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 		},
 		get earliestDate(){
 			'use strict'
-			if( typeof(this.earliest_date)!=='undefined' ) {
+			console.log('node '+this.id+': earliestDate');
+			if( typeof(this.earliest_date) !== 'undefined' ) {
 				return this.earliest_date;
 			} else if ( this.type_ === consts.INPUT ) {
 				this.load_data();
 				return this.earliest_date;
 			} else {
 				var source_node_ids = graph.edges_by_target.get(this.id);
-				var source_node;
-				return d3.max(source_node_ids.map(function(d){
-					source_node = graph.nodes[d].earliest_date
+				this.earliest_date = d3.max(source_node_ids.map(function(d){
+					return graph.nodes[d].earliestDate;
 				}));
+				return this.earliest_date;
 			}
 		},
 		get latestDate(){
 			'use strict'
-			if( typeof(this.latest_date)!=='undefined' ) {
+			console.log('node '+this.id+': latestDate');
+			if( typeof(this.latest_date) !== 'undefined' ) {
 				return this.latest_date;
 			} else if ( this.type_ === consts.INPUT ) {
 				this.load_data();
 				return this.latest_date;
 			} else {
 				var source_node_ids = graph.edges_by_target.get(this.id);
-				var source_node;
-				return d3.min(source_node_ids.map(function(d){
-					source_node = graph.nodes[d].latest_date
+				this.latest_date = d3.min(source_node_ids.map(function(d){
+					return graph.nodes[d].latestDate;
 				}));
+				return this.latest_date;
 			}
 		},
-		get periodicity(){
-			'use strict'
-			// UNIMPLEMENTED
-		},
+
 		load_data: function(){
 			'use strict'
+			console.log('node '+this.id+': load_data');
 			if ( this.type_ !== consts.INPUT ) {
 				throw new Error('Improper Load Attempt');
 			}
-			if ( this.input_mode === consts.SCALAR ) {
+			if ( this.input_mode_ === consts.SCALAR ) {
 				this.latest_date = null; // UNIMPLEMENTED
 				this.earliest_date = null; // UNIMPLEMENTED
 				this.periodicity = null; // UNIMPLEMENTED
-			} else if ( this.input_mode === consts.SOURCE ) {
-				// UNIMPLEMENTED
-				d3.json(filePrefix+this.input_file, function(error, data){
-					if (error) { callback(error, false) };
-					pc_data = data;
-					pc_data.forEach(function(d) {
-						d.date = parseDate(d.dt);
-						d.value = +d.vl;
+			} else if ( this.input_mode_ === consts.SOURCE ) {
+				var this_node = this;
+				var min_date, max_date, dt;
+				console.log('node '+this.id+': reading '+filePrefix+this.input_source_);
+				d3.json(filePrefix+this.input_source_, function(error, data){
+					if (error) { throw error };
+					min_date = parseDate(data[0][0]);
+					max_date = parseDate(data[0][0]);
+					this_node.in_data = {};
+					data.forEach(function(d) {
+						dt = parseDate(d[0]);
+						min_date = Math.min(min_date, dt);
+						max_date = Math.max(max_date, dt);
+						this_node.in_data[dt] = +d[1];
 					});
-					callback(null, true);        
+					this_node.latest_date = max_date; // UNIMPLEMENTED
+					this_node.earliest_date = min_date; // UNIMPLEMENTED
+					this_node.periodicity = null; // UNIMPLEMENTED
 				});
-				this.latest_date = null; // UNIMPLEMENTED
-				this.earliest_date = null; // UNIMPLEMENTED
-				this.periodicity = null; // UNIMPLEMENTED
+			} else {
+				throw new Error('Node source type not recognized');
 			}
 		},
 	};
@@ -997,7 +1040,7 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 			if (this.selected_edge){
 				this.edge_deselect();
 			}
-			// If SHIFT_KEY, make dragline
+			// If Shift Key Pressed, make dragline
 			if (d3.event.shiftKey){
 				this.mousedown_node = node_under;
 				this.shiftNodeDraw = d3.event.shiftKey;
@@ -1237,8 +1280,7 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 				.append('svg:circle')
 					.attr('class', 'node')
 					.attr('r', 48)
-					.style('fill', function(d) { 
-						return d.fill_color; })
+					.style('fill', function(d) {  return d.fill_color; })
 					.style('stroke', function(d) { return d.stroke_color; });
 			// Add New Nodes / Add Text
 			circle_enter
@@ -1249,7 +1291,7 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 					.text(function(d){return d.text;});
 
 			// Remove Deleted Nodes
-			this.circles.exit().remove()
+			this.circles.exit().remove();
 		},
 		update_graph: function(){
 			'use strict'
@@ -1262,7 +1304,6 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 		run_graph: function() {
 			var remaining_nodes = d3.values(this.nodes).filter(function(d){return (d.node_type===consts.INPUT);});
 			var new_nodes;
-			// );
 			var output_remains = false;
 			this.run_time = 0;
 			var target_ids, target_node;
@@ -1281,7 +1322,17 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 			}
 		},
 		validate_graph: function(){
-			// Input nodes don't have inbound
+			// Input Nodes
+			var input_nodes = graph.nodes.filter(function(node){
+				return (node.type_ === consts.INPUT);
+			});
+			// Input Nodes / No Inbound Nodes
+			input_nodes.forEach(function(node){
+				if (graph.edges_by_target.has_key(node.id)){
+					node.error = 'INPUT HAS INPUT';
+				}
+			});
+			// Input Nodes / No Repeated
 			// Input nodes don't have repeated data sources
 			// Output nodes don't have outbound
 			// Operation nodes don't have outbound
@@ -1328,9 +1379,9 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 				.attr('width', width)
 				.attr('height', height);
 	var stored_session = sessionStorage.getItem('graph');
-	if(stored_session && true){
+	if(stored_session){
 		console.log('Loading graph from autosave');
-		graph = Graph.fromJSON(svg, stored_session)
+		graph = Graph.fromJSON(svg, stored_session);
 	} else if(run_instructions.init_dummy){
 		var xLoc = width/2 - 25,
 		yLoc = 100;
@@ -1339,10 +1390,10 @@ document.onload = (function(d3, saveAs, Blob, undefined){
 				y_ = height/2 - 25,
 				id_ = 0;
 		var nodes = {
-									0: new Node({x: x_-200, y: y_-100, id: id_++, type_: consts.INPUT, name_: 'r'}),
-									1: new Node({x: x_-200, y: y_+100, id: id_++, type_: consts.INPUT, name_: 'g'}),
-									2: new Node({x: x_, y: y_, id: id_++, type_: consts.OPERATIONAL, operation_type: 'sb'}),
-									3: new Node({x: x_+200, y: y_, id: id_++, type_: consts.OUTPUT, name_: 'relative_growth_rate'}),
+									0: new Node({x: x_-200, y: y_-100, id: id_++, type: consts.INPUT, name: 'r'}),
+									1: new Node({x: x_-200, y: y_+100, id: id_++, type: consts.INPUT, name: 'g'}),
+									2: new Node({x: x_, y: y_, id: id_++, type: consts.OPERATIONAL, operation_type: 'sb'}),
+									3: new Node({x: x_+200, y: y_, id: id_++, type: consts.OUTPUT, name: 'relative_growth_rate'}),
 								};
 		var edges = [
 									{source: 1, target: 2},
