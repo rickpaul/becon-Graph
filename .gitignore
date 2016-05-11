@@ -4,3 +4,6 @@
 /img/*
 /bak/*
 /lib/*
+
+_test/*
+_logfiles/*
