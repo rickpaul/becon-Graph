@@ -2,8 +2,8 @@
 // Subfolders
 /data/*
 /img/*
-/bak/*
 /lib/*
 
+_bak/*
 _test/*
 _logfiles/*
