@@ -1,0 +1,54 @@
+<html>
+<head>
+	<meta charset='UTF-8'>
+	<meta name='author' content='becon'>
+	<meta name='description' content='beconae@gmail.com'>
+<!-- CSS -->
+<!-- CSS / Select2 -->
+	<!-- <link href='https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.2/css/select2.min.css' rel='stylesheet'/> -->
+<!-- CSS / Bootstrap -->
+	<link rel='stylesheet' href='http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css'>
+	<link rel='stylesheet' href='/lib/bootstrap/bootstrap.min.css'>
+<!-- CSS / Custom -->
+	<link rel='stylesheet' href='becon_graph_web.css'>
+	<link rel='stylesheet' href='app.css'>
+<!-- JavaScript -->
+<!-- JavaScript / jQuery  -->
+	<script src='http://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js'></script>
+	<script src='/lib/jquery/jquery.min.js'></script>
+<!-- JavaScript / Bootstrap -->
+	<script src='http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js'></script>
+	<script src='/lib/bootstrap/bootstrap.min.js'></script>
+<!-- JavaScript / D3 -->
+	<script src='https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.12/d3.min.js'></script>
+	<script src='/lib/d3/d3.v3.min.js'></script>
+<!-- JavaScript / Filesaver -->
+	<!-- script src='//cdn.jsdelivr.net/filesaver.js/0.1/FileSaver.min.js'></script -->
+<!-- JavaScript / Select2 -->
+	<!-- <script src='https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.2/js/select2.min.js'></script> -->
+<!-- JavaScript / jQuery-UI  -->
+	<!-- // <script src='//code.jquery.com/ui/1.11.4/jquery-ui.js'></script> -->
+<!-- Fade In Script -->
+</head>
+<body>
+	
+</body>
+<!-- JavaScript / Custom -->
+	<script type='text/javascript' src='js/becon_graph_Settings.js'></script>
+	<script type='text/javascript' src='js/becon_graph_AJAX.js'></script>
+	<script type='text/javascript' src='js/becon_graph_Node.js'></script>
+	<script type='text/javascript'>
+		window.onload=function() {
+			// AJAX_load_Node_Info(1,2);
+			// AJAX_load_Graph_Nodes(1);
+			AJAX_load_Graph_Nodes(1, function(d){console.log(d);});
+		}
+	</script>
+</html>
+
+
+
+
+
+
+
