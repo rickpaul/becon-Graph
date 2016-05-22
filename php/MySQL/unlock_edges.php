@@ -1,21 +1,24 @@
 <?php
 	header("Content-Type: application/json", true);
 	require_once "../config.php";
-	// require_once "../KLogger.php"; // DEBUG
-	// $log = new KLogger ( "../../_logfiles/load_nodes.log" , KLogger::DEBUG ); // DEBUG
-	// $log->logDebug('Log Initialized.'); // DEBUG
 
 	$return = array();
 	try {
 		// Retrieve Settings
 		$graph_id = $_POST["graph_id"];
 		// Construct Query
-		$query = "select `node_id` from nodes where `graph_id`=$graph_id";
+		$query = "update `edges` set `locked`=0 where `graph_id`=$graph_id;";
 		// Fetch Query Results
 		$query_result = $graph_mysqli->query($query);
-		$return["results"] = $query_result->fetch_all(MYSQLI_NUM);
+		// Return Affected Rows (as success/failure)
+		// (Note: Will return 0 if nothing is changed.)
+		if ($graph_mysqli->affected_rows > 0) {
+			$return["results"] = $graph_mysqli->affected_rows;
+		} else {
+			$return["results"] = 0;
+		}
 	} catch (Exception $e) {
-		$return["error"] = array("Unknown Error", $e);
+		$return["error"] = $e;
 	}
 	// Return Values
 	echo json_encode($return);

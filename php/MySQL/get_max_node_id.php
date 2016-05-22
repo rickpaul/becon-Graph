@@ -2,18 +2,18 @@
 	header("Content-Type: application/json", true);
 	require_once "../config.php";
 	// require_once "../KLogger.php"; // DEBUG
-	// $log = new KLogger ( "../../_logfiles/load_nodes.log" , KLogger::DEBUG ); // DEBUG
+	// $log = new KLogger ( "../../_logfiles/get_max_node_id.log" , KLogger::DEBUG ); // DEBUG
 	// $log->logDebug('Log Initialized.'); // DEBUG
 
 	$return = array();
 	try {
-		// Retrieve Settings
-		$graph_id = $_POST["graph_id"];
 		// Construct Query
-		$query = "select `node_id` from nodes where `graph_id`=$graph_id";
+		$query = "select max(`node_id`) from nodes;";
 		// Fetch Query Results
+		// $log->logDebug($query); // DEBUG
 		$query_result = $graph_mysqli->query($query);
-		$return["results"] = $query_result->fetch_all(MYSQLI_NUM);
+		$return["results"] = mysqli_fetch_row($query_result);
+		// $log->logDebug(json_encode($return["results"])); // DEBUG
 	} catch (Exception $e) {
 		$return["error"] = array("Unknown Error", $e);
 	}

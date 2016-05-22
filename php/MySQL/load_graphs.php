@@ -1,19 +1,14 @@
 <?php
 	header("Content-Type: application/json", true);
 	require_once "../config.php";
-	// require_once "../KLogger.php"; // DEBUG
-	// $log = new KLogger ( "../../_logfiles/load_nodes.log" , KLogger::DEBUG ); // DEBUG
-	// $log->logDebug('Log Initialized.'); // DEBUG
 
 	$return = array();
 	try {
-		// Retrieve Settings
-		$graph_id = $_POST["graph_id"];
 		// Construct Query
-		$query = "select `node_id` from nodes where `graph_id`=$graph_id";
+		$query = "select `graph_id`, `graph_name` from graphs;";
 		// Fetch Query Results
 		$query_result = $graph_mysqli->query($query);
-		$return["results"] = $query_result->fetch_all(MYSQLI_NUM);
+		$return["results"] = $query_result->fetch_all(MYSQLI_ASSOC);
 	} catch (Exception $e) {
 		$return["error"] = array("Unknown Error", $e);
 	}
