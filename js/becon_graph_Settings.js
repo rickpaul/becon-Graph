@@ -36,8 +36,8 @@ var phpMySQLPrefix = '/php/MySQL/';
 
 // Color Generation:
 // 	colors = d3.scale.category10();
-//  colors_brighter = d3.rgb(colors(1).brighter().toString())
-//  colors_darker = d3.rgb(colors(1).darker().toString())
+//  colors_brighter = d3.rgb(colors(1)).brighter().toString()
+//  colors_darker = d3.rgb(colors(1)).darker().toString()
 var colors = {};
 colors[consts.CONCEPT] = '#9467BD';
 colors[consts.OPERATIONAL] = '#D62728';
@@ -54,7 +54,7 @@ var colors_darker = {};
 colors_darker[consts.CONCEPT] = '#674884';
 colors_darker[consts.OPERATIONAL] = '#951B1C';
 colors_darker[consts.INPUT] = '#B25809';
-colors_darker[consts.OUTPUT] = '#1E701E';
+colors_darker[consts.OUTPUT] = '#15537d';
 
 var node_default = {};
 node_default.node_name_prefix = 'node_';
@@ -108,13 +108,24 @@ HTML_ID_operation_Map['#op_ml'] = consts.mul;
 HTML_ID_operation_Map['#op_dv'] = consts.div;
 HTML_ID_operation_Map['#op_gt'] = consts.gt;
 HTML_ID_operation_Map['#op_lt'] = consts.lt;
-
+////////////////////////////////////////////////////////////////////////////////
+// MYSQL CODE CONSTANTS
+////////////////////////////////////////////////////////////////////////////////
+var MySQL_ID_node_type_Map = {};
+MySQL_ID_node_type_Map['concept'] = consts.CONCEPT;
+MySQL_ID_node_type_Map['input'] = consts.INPUT;
+MySQL_ID_node_type_Map['operation'] = consts.OPERATIONAL;
+MySQL_ID_node_type_Map['output'] = consts.OUTPUT;
+var Node_type_MySQL_ID_Map = {};
+Node_type_MySQL_ID_Map[consts.CONCEPT] = 'concept';
+Node_type_MySQL_ID_Map[consts.INPUT] = 'input';
+Node_type_MySQL_ID_Map[consts.OPERATIONAL] = 'operation';
+Node_type_MySQL_ID_Map[consts.OUTPUT] = 'output';
 
 var run_instructions = {
 	verbose: true,
 	allow_stored: false,
 	init_dummy: false,
 	init_dummy_DB: true,
-	init_dummy_DB_ID: 1,
-
+	init_dummy_DB_ID: 2,
 };

@@ -1,6 +1,7 @@
 var session_id = null;
 var graph_id = null;
-
+var graph = null;
+var svg = null;
 
 //////////////////////////////////////////////////////////////////////////////
 // Helper Functions
@@ -19,7 +20,6 @@ function calibrate_canvas(svg){
 }
 
 function init_graph(svg) {
-	var graph;
 	var w_ = 0;
 	var h_ = 0;
 	var stored_session = sessionStorage.getItem('graph');
@@ -44,25 +44,28 @@ function init_graph(svg) {
 			{source: 0, target: 2},
 			{source: 2, target: 3},
 		];
-		graph = new Graph(svg, nodes, edges);
+		var graph_id = run_instructions.init_dummy_DB_ID;
+		graph = new Graph(svg, graph_id);
+		graph.fromObj_load_nodes(nodes);
+		graph.fromObj_load_edges(edges);
 	} else if(run_instructions.init_dummy_DB){
 		var graph_id = run_instructions.init_dummy_DB_ID;
-		graph = new Graph(svg);
-		AJAX_load_Graph_Nodes(graph_id, graph.set_nodes);
-		AJAX_load_Graph_Edges(graph_id, graph.set_edges);
+		graph = new Graph(svg, graph_id);
+		graph.fromDB_load_nodes();
+		graph.fromDB_load_edges();
 	} else {
 		console.log('Initializing empty graph');
-		graph = new Graph(svg);
+		graph = new Graph(svg, 0);
 	}
 	return graph;
 }
 
 function setup() {
 	// create svg and calibrate
-	var svg = d3.select('#graph-holder').append('svg')
+	svg = d3.select('#graph-holder').append('svg')
 	calibrate_canvas(svg);
 	// create graph and update
-	var graph = init_graph(svg);
+	graph = init_graph(svg);
 	graph.update_graph();
 	// create window resize listener
 	window.onresize = function(){graph.update_window(graph.svg);}

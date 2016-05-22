@@ -37,29 +37,39 @@
 	//////////////////////////////////////////////////////////////////////////////
 	// Graph Object
 	//////////////////////////////////////////////////////////////////////////////
-	var Graph = function(svg_, nodes_, edges_){
+	var Graph = function(svg_, graph_id_){
 		'use strict'
 		////////////////////////////////////////////////////////////////////////////
 		// Graph State Variables
 		////////////////////////////////////////////////////////////////////////////
+		graph = this; // TODO: Do we only need to do this once?
+		this.graph_id = graph_id_;
+		this.async_tasks = 0; // hack for making sure we're dealing with async tasks.
 		// Add Nodes and Edges
-		this.nodes = nodes_ || {};
-		this.id_ct = d3.max(Object.keys(this.nodes).map(function(d){return parseInt(d);})) || 0;
+		// Add Nodes and Edges / Get ID Count
+		queue()
+			.defer(graph.increment_task_count)
+			.defer(AJAX_get_Node_ID_Count)
+			.await(function(error, task_action, ID_Count){
+				graph.id_ct = parseInt(ID_Count);
+				graph.decrement_task_count();
+			})
+		;
+		// Add Nodes and Edges / Add Nodes
+		this.nodes = {};
+
+		// Add Nodes and Edges / Add Edges
 		this.edges_by_target = new Array_Dictionary();
 		this.edges_by_source = new Array_Dictionary();
-		this.edges = edges_ || [];
-		graph = this; // TODO: Do we only need to do this once?
-		this.edges.forEach(function(edge){
-			graph.edges_by_source.add(edge.source, edge.target);
-			graph.edges_by_target.add(edge.target, edge.source);
-		});
+		this.edges = [];
+
 		// Initialize SVG
 		this.svg = svg_;
 		this.svg = initialize_svg_markers(this.svg);
 		this.svg_group = initialize_svg_graph_group(this.svg);
 		// Initialize SVG Groups
-		this.paths = this.svg_group.append('g').selectAll('g'); // these aren't selecting the same thing?
-		this.circles = this.svg_group.append('g').selectAll('g');// these aren't selecting the same thing?
+		this.paths = this.svg_group.append('g').selectAll('g');
+		this.circles = this.svg_group.append('g').selectAll('g');
 
 		this.selected_node = null;
 		this.selected_node_circle = null;
@@ -82,8 +92,6 @@
 		////////////////////////////////////////////////////////////////////////////
 		// Event Listeners
 		////////////////////////////////////////////////////////////////////////////
-		// Save off 'this' graph for use in handlers
-		graph = this;
 		// Drag Listener
 		this.circle_drag = d3.behavior.drag()
 			.origin(function(d){
@@ -140,39 +148,162 @@
 		// Graph Mouse Listeners
 		this.svg.on('mousedown', function(d){graph.svg_mousedown_handle.call(graph, d);});
 		this.svg.on('mouseup', function(d){graph.svg_mouseup_handle.call(graph, d);});
-
-		// Save off 'this' graph for use in debug
-		graph = this;
 	};
 	//////////////////////////////////////////////////////////////////////////////
 	// Graph Static Functions
 	//////////////////////////////////////////////////////////////////////////////
-	Graph.fromJSON = function(svg_, json_){
+	Graph.fromJSON = function(json_){
 		'use strict'
 		json_ = JSON.parse(json_);
-		var nodes_obj = {};
-		d3.entries(json_.nodes).map(function(d){
-			nodes_obj[d.key] = new Node(d.value);
-		});
-		return new Graph(svg_, nodes_obj, json_.edges);
+		graph.graph_id = json_.graph_id;
+		graph.fromObj_load_nodes(json_.nodes);
+		graph.fromObj_load_edges(json_.edges);
+		return graph;
 	};
 	//////////////////////////////////////////////////////////////////////////////
 	// Graph Prototype Functions
 	//////////////////////////////////////////////////////////////////////////////
 	Graph.prototype = {
 		////////////////////////////////////////////////////////////////////////////
-		// JSON Functions
+		// Async Queue Functions
 		////////////////////////////////////////////////////////////////////////////
-		toJSON: function(){
+		increment_task_count: function(callback) {
+			graph.async_tasks+=1;
+			console.log('++ASYNC TASKS: ' + graph.async_tasks);
+			if(callback){callback(null, 1);}
+		},
+		decrement_task_count: function(callback) {
+			graph.async_tasks-=1;
+			console.log('--ASYNC TASKS: ' + graph.async_tasks);
+			if(callback){callback(null, -1);}
+		},
+		////////////////////////////////////////////////////////////////////////////
+		// Loading Functions
+		////////////////////////////////////////////////////////////////////////////
+		fromObj_load_nodes: function(nodes_) {
+			// Create New Nodes
+			var nodes_obj = {};
+			// Replace Nodes
+			d3.entries(nodes_).map(function(d){
+				nodes_obj[d.key] = new Node(d.value);
+			});
+			// _.extend(this.nodes, nodes_obj);
+			this.nodes = nodes_obj;
+			// Reset Graph
+			this.update_graph();
+		},
+		fromObj_load_edges: function(edges_) {
+			// Clear Old Edges
+			this.edges = [];
+			graph.edges_by_source = new Array_Dictionary();
+			graph.edges_by_target = new Array_Dictionary();
+			// Add New Edges
+			edges_.forEach(function(edge_){
+				graph.edges.push(edge_);
+				graph.edges_by_source.add(edge_.source, edge_.target);
+				graph.edges_by_target.add(edge_.target, edge_.source);
+			});
+			// Reset Graph
+			this.update_graph();
+		},
+		fromDB_load_nodes: function(graph_id) {
+			var load_graph_id = graph_id || this.graph_id;
+			var outer_q = queue()
+				.defer(graph.increment_task_count)
+				.defer(AJAX_load_Graph_Nodes, load_graph_id)
+				.await(function(error, task_action, nodes_) {
+					graph.nodes = {};
+					nodes_.forEach(function(d){graph.nodes[d] = null;});
+					graph.decrement_task_count();
+					var inner_q = queue();
+					// Get Node Info
+					Object.keys(graph.nodes).forEach(function(node_id) {
+						graph.increment_task_count();
+						inner_q.defer(AJAX_load_Node_Info, load_graph_id, node_id);
+					});
+					inner_q.awaitAll(function(error, nodes_) {
+						// Clear Old Nodes
+						graph.nodes = {};
+						// Replace Nodes
+						nodes_.forEach(function(node_){
+							graph.nodes[node_.id] = new Node(node_);
+							graph.decrement_task_count();
+						});
+						// Reset Graph
+						graph.update_graph();
+					});
+				})
+			;
+			this.update_graph();
+		},
+		fromDB_load_edges: function(graph_id) {
+			var load_graph_id = graph_id || this.graph_id;
+			queue()
+				.defer(graph.increment_task_count)
+				.defer(AJAX_load_Graph_Edges, load_graph_id)
+				.await(function(error, task_action, edges_) {
+					// Clear Old Edges
+					graph.edges = [];
+					graph.edges_by_source = new Array_Dictionary();
+					graph.edges_by_target = new Array_Dictionary();
+					// Add New Edges
+					edges_.forEach(function(edge_){
+						graph.edges.push(edge_);
+						graph.edges_by_source.add(edge_.source, edge_.target);
+						graph.edges_by_target.add(edge_.target, edge_.source);
+					});
+					graph.decrement_task_count();
+					// Reset Graph
+					graph.update_graph();
+				})
+			;
+		},
+		////////////////////////////////////////////////////////////////////////////
+		// Saving Functions
+		////////////////////////////////////////////////////////////////////////////
+		toJSON: function() {
 			'use strict'
 			var nodes_obj = {};
-			d3.entries(this.nodes).map(function(d){
+			d3.entries(this.nodes).map(function(d) {
 				nodes_obj[d.key] = d.value.toSimpleObject();
 			});
 			return JSON.stringify({
 				'edges': this.edges,
-				'nodes': nodes_obj
+				'nodes': nodes_obj,
+				'graph_id': this.graph_id
 			});
+		},
+		toDB_save_nodes: function() {
+			
+		},
+		toDB_save_edges: function() {
+			var graph_id = this.graph_id;
+			queue()
+				.defer(graph.increment_task_count)
+				.defer(AJAX_unlock_Edges, graph_id)
+				.await(function(error, task_action, success) {
+					graph.decrement_task_count();
+					// Add Graph Edges
+					var inner_q = queue();
+					graph.edges.forEach(function(edge_){
+						graph.increment_task_count();
+						inner_q.defer(AJAX_save_Edge, graph_id, edge_.source, edge_.target);
+					});
+					inner_q.awaitAll(function(error, successes) {
+						successes.forEach(function(success_){
+							if( success_ === 1 ) { graph.decrement_task_count(); }
+						})
+					});
+					// Delete Unlocked Edges
+					queue()
+						.defer(graph.increment_task_count)
+						.defer(AJAX_delete_unlocked_Edges, graph_id)
+						.await(function(error, task_action, success) {
+							graph.decrement_task_count();
+						})
+					;
+				})
+			;
 		},
 		////////////////////////////////////////////////////////////////////////////
 		// Mechanical Functions
@@ -252,21 +383,21 @@
 				id:this.id_ct
 			});
 		},
-		set_nodes: function(nodes_) {
-			console.log('SET NODES: '+ nodes_);
-			console.log('SET NODES: '+ this);
-			console.log('SET NODES: '+ graph);
-			this.nodes = nodes_;
-			this.update_graph();
-		},
-		set_edges: function(edges_) {
-			edges_.map(function(d){
-				this.edges_by_source.add(d.source, d.target);
-				this.edges_by_target.add(d.target, d.source);
-				this.edges.push(d);
-			});
-			this.update_graph();
-		},
+		// set_nodes: function(nodes_) {
+		// 	console.log('SET NODES: '+ nodes_);
+		// 	console.log('SET NODES: '+ this);
+		// 	console.log('SET NODES: '+ graph);
+		// 	this.nodes = nodes_;
+		// 	this.update_graph();
+		// },
+		// set_edges: function(edges_) {
+		// 	edges_.map(function(d){
+		// 		this.edges_by_source.add(d.source, d.target);
+		// 		this.edges_by_target.add(d.target, d.source);
+		// 		this.edges.push(d);
+		// 	});
+		// 	this.update_graph();
+		// },
 		path_mousedown_handle: function(d3path, d){
 			'use strict'
 			// prevent default
@@ -572,6 +703,7 @@
 		},
 		update_graph: function(){
 			'use strict'
+			if(this.async_tasks > 0){ return; }
 			// Save Current Version of Graph to Session Storage
 			sessionStorage.setItem('graph', this.toJSON());
 			// Update Graphs Circles and Edges
