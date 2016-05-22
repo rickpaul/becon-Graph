@@ -10,8 +10,8 @@
 	<link rel='stylesheet' href='http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css'>
 	<link rel='stylesheet' href='/lib/bootstrap/bootstrap.min.css'>
 <!-- CSS / Custom -->
-	<link rel='stylesheet' href='becon_graph_web.css'>
-	<link rel='stylesheet' href='app.css'>
+	<link rel='stylesheet' href='/css/becon_graph_web.css'>
+	<link rel='stylesheet' href='/css/app.css'>
 <!-- JavaScript -->
 <!-- JavaScript / jQuery  -->
 	<script src='http://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js'></script>
@@ -22,6 +22,9 @@
 <!-- JavaScript / D3 -->
 	<script src='https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.12/d3.min.js'></script>
 	<script src='/lib/d3/d3.v3.min.js'></script>
+<!-- JavaScript / Queue -->
+	<script src='https://d3js.org/d3-queue.v2.min.js'></script>
+	<script src='/lib/queue/queue.min.js'></script>
 <!-- JavaScript / Filesaver -->
 	<!-- script src='//cdn.jsdelivr.net/filesaver.js/0.1/FileSaver.min.js'></script -->
 <!-- JavaScript / Select2 -->
@@ -38,10 +41,41 @@
 	<script type='text/javascript' src='js/becon_graph_AJAX.js'></script>
 	<script type='text/javascript' src='js/becon_graph_Node.js'></script>
 	<script type='text/javascript'>
+		var x;
 		window.onload=function() {
-			// AJAX_load_Node_Info(1,2);
+			// AJAX_delete_unlocked_Edges(1, function(e, d){x=d; console.log(d);});
+			// var node_data = {
+			// 	id: 6,
+			// 	name: 'test_insert_node',
+			// 	type: consts.CONCEPT,
+			// 	description: 'this is a test node',
+			// 	x: 0,
+			// 	y: 0,
+			// }
+			// AJAX_save_Node_Info(3, node_data, function(e, d){x=d; console.log(d);});
+			// AJAX_delete_Node(6, function(e, d){x=d; console.log(d);});
+			// $.ajax({
+			// 	url: '/php/mySQL/save_node_info.php',
+			// 	data: {
+			// 		graph_id: 1,
+			// 		node_id: 2,
+			// 		columns: ['a', 'b', 'c'],
+			// 		values: [1, 2, 3]
+			// 	},
+			// 	dataType: 'JSON',
+			// 	type: 'POST',
+			// 	success: function(data) {
+			// 		console.log(data);
+			// 	},
+			// 	error: function ( xhr, status, error) {
+			// 		console.log(xhr);
+			// 		if(error) { alert (error); }
+			// 	}
+			// })
+			// AJAX_save_Graph_Info(3,'test_test','testing updating on another test graph',function(e, d){x=d; console.log(d);});
+			// AJAX_load_Graphs(function(e, d){x=d; console.log(d);});
 			// AJAX_load_Graph_Nodes(1);
-			AJAX_load_Graph_Nodes(1, function(d){console.log(d);});
+			// AJAX_load_Graph_Nodes(1, function(e, d){x=d; console.log(d);});
 		}
 	</script>
 </html>

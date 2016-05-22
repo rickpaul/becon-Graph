@@ -11,9 +11,12 @@
 	<link rel='stylesheet' href='http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css'>
 	<link rel='stylesheet' href='/lib/bootstrap/bootstrap.min.css'>
 <!-- CSS / Custom -->
-	<link rel='stylesheet' href='becon_graph_web.css'>
-	<link rel='stylesheet' href='app.css'>
+	<link rel='stylesheet' href='/css/becon_graph_web.css'>
+	<link rel='stylesheet' href='/css/app.css'>
 <!-- JavaScript -->
+<!-- JavaScript / Underscore -->
+	<script src='https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js'></script>
+	<script src='/lib/underscore/underscore.min.js'></script>
 <!-- JavaScript / jQuery  -->
 	<script src='http://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js'></script>
 	<script src='/lib/jquery/jquery.min.js'></script>
@@ -23,6 +26,9 @@
 <!-- JavaScript / D3 -->
 	<script src='https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.12/d3.min.js'></script>
 	<script src='/lib/d3/d3.v3.min.js'></script>
+<!-- JavaScript / Queue -->
+	<script src='https://d3js.org/d3-queue.v2.min.js'></script>
+	<script src='/lib/queue/queue.min.js'></script>
 <!-- JavaScript / Filesaver -->
 	<!-- script src='//cdn.jsdelivr.net/filesaver.js/0.1/FileSaver.min.js'></script -->
 <!-- JavaScript / Select2 -->
@@ -30,36 +36,53 @@
 <!-- JavaScript / jQuery-UI  -->
 	<!-- // <script src='//code.jquery.com/ui/1.11.4/jquery-ui.js'></script> -->
 <!-- Fade In Script -->
-	<script> setTimeout(function(){$('body').fadeIn(500);},0); </script>
+	<script> setTimeout(function(){$('body').fadeIn(1000);},0); </script>
 </head>
 <body>
 	<div id='graph-holder'>
 	</div>
+	<div id='status-holder'>
+	</div>
 	<div id='slider-holder'>
 	</div>
 	<div id='graph-control-holder'>
-		<div class='form-group'>
-			<div class='radio col-sm-offset-1'>
-				<label class='radio-inline'><input type='radio' name='graph-control-input' id='graph-control-move' value=1 checked='checked'> Move Graph</label>
-				<label class='radio-inline'><input type='radio' name='graph-control-input' id='graph-control-add-node' value=2> Add Node</label>
+		<form class='form-horizontal' id='graph-control-form' role='form' autocomplete='off'>
+			<div class='form-group'>
+				<div class='radio col-sm-offset-1'>
+					<label class='radio-inline'><input type='radio' name='graph-control-input' id='graph-control-move' value=1 checked='checked'> Move Graph</label>
+					<label class='radio-inline'><input type='radio' name='graph-control-input' id='graph-control-add-node' value=2> Add Node</label>
+				</div>
 			</div>
-		</div>
-		<div class='form-group'>
-			<a id='btn_save_graph'>
-				<input class='col-sm-offset-1' type='button' value='Save Graph' />
-			</a>
-			<a id='btn_run_graph'>
-				<input class='col-sm-offset-0' type='button' value='Run Graph' />
-			</a>
-			<a id='btn_check_graph'>
-				<input class='col-sm-offset-0' type='button' value='Check Graph' />
-			</a>
-		</div>
-		<div class='form-group'>
-			<a id='btn_load_graph'>
-				<input class='col-sm-offset-1' type='button' value='Load Graph' />
-			</a>
-		</div>
+			<div class='form-group horizontal'>
+				<p class='major col-sm-offset-1 col-sm-1' id='txt-graph-id'></p>
+				<p class='major col-sm-offset-0 col-sm-1' id='txt-graph-name'></p>
+				<p class='major col-sm-offset-1 col-sm-4' id='txt-graph-desc'></p>
+			</div>
+			<div class='form-group'>
+				<a id='btn_run_graph'>
+					<input class='col-sm-offset-1 col-sm-2' type='button' value='Run Graph' />
+				</a>
+				<a id='btn_check_graph'>
+					<input class='col-sm-offset-0 col-sm-2' type='button' value='Check Graph' />
+				</a>
+			</div>
+			<div class='form-group'>
+				<a id='btn_save_graph'>
+					<input class='col-sm-offset-1 col-sm-2' type='button' value='Save Graph' />
+				</a>
+				<a id='btn_save_graph'>
+					<input class='col-sm-offset-0 col-sm-2' type='button' value='Save As New' />
+				</a>
+			</div>
+			<div class='form-group'>
+				<a id='btn_load_graph'>
+					<input class='col-sm-offset-1 col-sm-2' type='button' value='Load Graph' />
+				</a>
+				<div>
+					<select class='col-sm-offset-0 col-sm-2' id='graph-select'></select> 
+				</div>
+			</div>
+		</form>
 	</div>
 	<div id='node-form-holder'>
 		<form class='form-horizontal' id='update-node-form' role='form' autocomplete='off'>
@@ -152,6 +175,7 @@
 </body>
 <!-- JavaScript / Custom -->
 	<script type='text/javascript' src='lib/_custom/Array_Dictionary.js'></script>
+	<script type='text/javascript' src='lib/_custom/custom_functions.js'></script>
 	<script type='text/javascript' src='js/becon_graph_Settings.js'></script>
 	<script type='text/javascript' src='js/becon_graph_WEB.js'></script>
 	<script type='text/javascript' src='js/becon_graph_AJAX.js'></script>
@@ -160,6 +184,7 @@
 	<script type='text/javascript' src='js/becon_graph.js'></script>
 	<script type='text/javascript'>
 		window.onload=function() {
+			WEB_populate_graph_select_box();
 			WEB_populate_input_select_box();
 			WEB_hide_node_form();
 			WEB_hide_edge_form();
@@ -186,6 +211,7 @@
 			$('#populate-operation-inputs').bind('click', WEB_populate_operation_inputs);
 			$('#op-rght-source-select').on('change', WEB_handle_right_op_select);
 			$('#op-left-source-select').on('change', WEB_handle_left_op_select);
+
 		}
 	</script>
 </html>

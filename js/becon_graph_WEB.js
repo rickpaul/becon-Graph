@@ -1,24 +1,36 @@
-
-function WEB_handle_save_graph(){
-	localStorage.setItem('graph', graph.toJSON());
+////////////////////////////////////////////////////////////////////////////////
+// WEB CODE
+////////////////////////////////////////////////////////////////////////////////
+function WEB_handle_save_graph() {
+	// graph.toDB_save_nodes();
+	// graph.toDB_save_edges();
+	// AJAX_save_Graph_Info();
 }
-function WEB_handle_load_graph(){
-	var stored_session = localStorage.getItem('graph');
-	graph = Graph.fromJSON(svg, stored_session);
-	graph.update_graph();
+function WEB_handle_load_graph() {
+	graph.graph_id = parseInt($('#graph-select').val());	
+	graph.fromDB_load_nodes();
+	graph.fromDB_load_edges();
+	AJAX_load_Graph_Info(graph.graph_id, function(error, graph_info){
+		console.log(graph_info); // DEBUG;
+		$('#txt-graph-id').text(graph_info.id);
+		$('#txt-graph-name').text(graph_info.name);
+		$('#txt-graph-desc').text(graph_info.desc);
+	});
 }
 function WEB_handle_run_graph(){
-	// Do nothing
+	// Do Nothing
 }
 function WEB_handle_check_graph(){
 	// Do nothing
 }
 function WEB_hide_graph_control() {
 	// console.log('WEB_hide_graph_control');
- $('#graph-control-holder').hide(); }
+ $('#graph-control-holder').hide(); 
+}
 function WEB_show_graph_control() { 
 	// console.log('WEB_show_graph_control');
-	$('#graph-control-holder').show(); }
+	$('#graph-control-holder').show(); 
+}
 function WEB_show_operation_node_subform() {
 	// Show Subform
 	$('#operation_subform').show(); 
@@ -141,6 +153,14 @@ function WEB_populate_input_select_box(){
 	});
 }
 
+function WEB_populate_graph_select_box(){
+	AJAX_load_Graphs(function(error, results){
+		results.forEach(function(d){
+			$('<option value='+d.graph_id+'>'+d.graph_name+'</option>').appendTo('#graph-select');
+		});
+	});
+}
+
 function WEB_handle_operation_switch(){
 	graph.selected_node.switch_operation_order();
 }
@@ -185,10 +205,11 @@ function web_effect_require_resubmit(object, new_placeholder) {
 	object.attr('placeholder', new_placeholder);      
 }
 function web_effect_entry_acceptable(object) {
-		object.css({'background-color' : '#FFFFFF'});
+	object.css({'background-color' : '#FFFFFF'});
 }
 
-function check_node_name_input(node_name) {
+
+function check_node_name_input(node_name) { // TODO: Move
 	return !(
 		(node_name==null) ||
 		(node_name=='') ||
@@ -213,8 +234,7 @@ function web_handle_edge_delete_really(event) {
 	'use strict'
 	graph.edge_delete(graph.selected_edge);
 }
-function WEB_handle_node_cancel(event)
-{
+function WEB_handle_node_cancel(event) {
 	'use strict'
 	event.preventDefault();
 	WEB_hide_node_form();
@@ -224,7 +244,6 @@ function WEB_handle_node_submit(event)
 {
 	'use strict'
 	event.preventDefault();
-	// if(graph.selected_node == null){ return false; } // TODO: Should Never hit this...
 	// Check Node Name
 	var node_name_obj = $('#node-name-input')
 	var node_name = node_name_obj.val();
@@ -237,8 +256,7 @@ function WEB_handle_node_submit(event)
 	}
 	// Check for Duplicate Name
 	var node_names = d3.values(graph.nodes).map(function(d){return d.name;});
-	if (graph.selected_node.name != node_name && node_names.indexOf(node_name) >= 0 )
-	{
+	if (graph.selected_node.name != node_name && node_names.indexOf(node_name) >= 0 ) {
 		web_effect_require_resubmit(node_name_obj, 'Please Enter Unique Node Name');
 		return false;
 	}
@@ -247,15 +265,21 @@ function WEB_handle_node_submit(event)
 	// Save Node Type
 	var node_type = $('input[name=node_type_radio]:checked', '#update-node-form').val();
 	node_type = parseInt(node_type);
-	graph.selected_node.type_ = node_type;
+	graph.selected_node.type = node_type;
 	// Save Node Metadata
 	if(node_type === consts.CONCEPT){
 		
 	} else if(node_type === consts.INPUT){
 		graph.selected_node.input_source_ = $('#input-source-select').val();
 	} else if(node_type === consts.OPERATIONAL){
-		graph.selected_node.operation_left = parseInt($('#op-left-source-select').val());
-		graph.selected_node.operation_right = parseInt($('#op-rght-source-select').val());
+		var op_left_input = $('#op-left-source-select').val();
+		if(op_left_input) {
+			graph.selected_node.operation_left = parseInt($('#op-left-source-select').val());
+		}
+		var op_rght_input = $('#op-rght-source-select').val();
+		if(op_rght_input) {
+			graph.selected_node.operation_right = parseInt($('#op-rght-source-select').val());
+		}
 		graph.selected_node.operation_type = $('input[name=operation_radio]:checked', '#update-node-form').val();
 	} else if(node_type === consts.OUTPUT){
 	} else {
