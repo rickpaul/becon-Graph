@@ -9,10 +9,9 @@
 		$graph_name = $_POST["graph_name"];
 		$graph_desc = $_POST["graph_desc"];
 		// Construct Query
-		$query = "insert into `graphs`
-		(`graph_id`, `graph_name`, `graph_desc`)
-		values ($graph_id, '$graph_name', '$graph_desc')
-		on duplicate key update `graph_name`='$graph_name', `graph_desc`='$graph_desc';";
+		$query = "update `graphs` set 
+		`graph_name`='$graph_name', `graph_desc`='$graph_desc'
+		where `graph_id`=$graph_id;";
 		// Fetch Query Results
 		$query_result = $graph_mysqli->query($query);
 		// Return Affected Rows (as success/failure)

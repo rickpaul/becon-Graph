@@ -1,9 +1,9 @@
 <?php
 	header("Content-Type: application/json", true);
-	require_once "../config.php";
-	require_once "../KLogger.php"; // DEBUG
-	$log = new KLogger ( "../../_logfiles/save_node_info.log" , KLogger::DEBUG ); // DEBUG
-	$log->logDebug('Log Initialized.'); // DEBUG
+	// require_once "../config.php";
+	// require_once "../KLogger.php"; // DEBUG
+	// $log = new KLogger ( "../../_logfiles/save_node_info.log" , KLogger::DEBUG ); // DEBUG
+	// $log->logDebug('Log Initialized.'); // DEBUG
 
 	$return = array();
 	try {
@@ -26,7 +26,7 @@
 		values ($graph_id, $node_id, $values)
 		on duplicate key update $update;
 		";
-		$log->logDebug($query); // DEBUG
+		// $log->logDebug($query); // DEBUG
 		// Fetch Query Results
 		$query_result = $graph_mysqli->query($query);
 		// Return Affected Rows (as success/failure)

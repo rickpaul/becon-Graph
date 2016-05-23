@@ -1,17 +1,85 @@
 ////////////////////////////////////////////////////////////////////////////////
+// Helper Variables
+// These probably aren't necessary forever
+////////////////////////////////////////////////////////////////////////////////
+// var console_callback_fn = function(e, d){console.log(d);};
+////////////////////////////////////////////////////////////////////////////////
+// State Variables
+// These probably aren't necessary forever
+////////////////////////////////////////////////////////////////////////////////
+var edit_graph = null; // Sloppy...
+////////////////////////////////////////////////////////////////////////////////
 // WEB CODE
 ////////////////////////////////////////////////////////////////////////////////
+function WEB_hide_graph_info_subform() {
+	$('#graph_info_subform').hide();
+}
+
+function WEB_show_graph_info_subform() {
+	$('#graph_info_subform').show();
+}
+
+function WEB_handle_graph_saveAs() {
+	$('#graph-name-input').val('');
+	$('#graph-desc-input').val('');
+	WEB_show_graph_info_subform();
+	edit_graph = false;
+}
+
+function WEB_handle_edit_graph_info() {
+	AJAX_load_Graph_Info(graph.graph_id, function(error, graph_info){
+		$('#graph-name-input').val(graph_info.name);
+		$('#graph-desc-input').val(graph_info.desc);
+		WEB_show_graph_info_subform();
+		edit_graph = true;
+	});
+}
+
+function graph_name_acceptable(graph_name_) {
+	// TODO: Fill in with other checks
+	return graph_name_ != '';
+}
+function WEB_save_graph_info() {
+	var graph_name = $('#graph-name-input').val();
+	if (!graph_name_acceptable(graph_name)){return;}
+	var graph_desc = $('#graph-desc-input').val();
+	if( edit_graph ) {
+		AJAX_save_Graph_Info(graph.graph_id, graph_name, graph_desc,function(error, success_){
+			if( !error && success_ ) {
+				$('#txt-graph-name').text(graph_name);
+				$('#txt-graph-desc').text(graph_desc);
+			} else {
+				console.log('ERROR'); // TODO: HANDLE BETTER
+			}
+		});
+	} else {
+		AJAX_save_new_Graph(graph_name, graph_desc, function(error, graph_id_){
+			if( !error ) {
+				graph.graph_id = graph_id_;
+				$('#txt-graph-id').text(graph.graph_id);	
+				$('#txt-graph-name').text(graph_name);
+				$('#txt-graph-desc').text(graph_desc);
+			} else {
+				console.log('ERROR'); // TODO: HANDLE BETTER
+			}
+		});
+	}
+	WEB_populate_graph_select_box();
+	WEB_hide_graph_info_subform();
+	edit_graph = null;
+}
 function WEB_handle_save_graph() {
 	// graph.toDB_save_nodes();
 	// graph.toDB_save_edges();
-	// AJAX_save_Graph_Info();
 }
 function WEB_handle_load_graph() {
-	graph.graph_id = parseInt($('#graph-select').val());	
+	graph.graph_id = parseInt($('#graph-select').val());
+	$('#txt-graph-id').text('...');
+	$('#txt-graph-name').text('...');
+	$('#txt-graph-desc').text('...');
 	graph.fromDB_load_nodes();
 	graph.fromDB_load_edges();
 	AJAX_load_Graph_Info(graph.graph_id, function(error, graph_info){
-		console.log(graph_info); // DEBUG;
 		$('#txt-graph-id').text(graph_info.id);
 		$('#txt-graph-name').text(graph_info.name);
 		$('#txt-graph-desc').text(graph_info.desc);
@@ -24,13 +92,14 @@ function WEB_handle_check_graph(){
 	// Do nothing
 }
 function WEB_hide_graph_control() {
-	// console.log('WEB_hide_graph_control');
- $('#graph-control-holder').hide(); 
+	$('#graph-control-holder').hide();
 }
+
 function WEB_show_graph_control() { 
-	// console.log('WEB_show_graph_control');
-	$('#graph-control-holder').show(); 
+	$('#graph-control-holder').show();
+	WEB_hide_graph_info_subform();
 }
+
 function WEB_show_operation_node_subform() {
 	// Show Subform
 	$('#operation_subform').show(); 
@@ -142,6 +211,7 @@ function WEB_show_node_subforms()
 }
 
 function WEB_populate_input_select_box(){
+	$('#input-source-select').find('option').remove().end();
 	$.ajax({
 		url: '/data/',
 		success: function(data){
@@ -154,6 +224,7 @@ function WEB_populate_input_select_box(){
 }
 
 function WEB_populate_graph_select_box(){
+	$('#graph-select').find('option').remove().end();
 	AJAX_load_Graphs(function(error, results){
 		results.forEach(function(d){
 			$('<option value='+d.graph_id+'>'+d.graph_name+'</option>').appendTo('#graph-select');

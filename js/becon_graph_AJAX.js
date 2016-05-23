@@ -1,11 +1,10 @@
 var php_raw_data; // DEBUG
 
-function AJAX_delete_Node(node_id, callback) {
+function AJAX_TrueFalse_Call(url, data, callback) {
+	'use strict'
 	$.ajax({
-			url: phpMySQLPrefix+'delete_node.php',
-			data: {
-				node_id: node_id,
-			},
+			url: url,
+			data: data,
 			type: 'POST',
 			dataType: 'JSON',
 			cache: false
@@ -28,152 +27,93 @@ function AJAX_delete_Node(node_id, callback) {
 	;
 }
 
+function AJAX_delete_Node(node_id, callback) {
+	var url = phpMySQLPrefix+'delete_node.php';
+	var data = {
+		node_id: node_id,
+	};
+	AJAX_TrueFalse_Call(url, data, callback);
+}
+
+
 function AJAX_save_Edge(graph_id, source_node_id, target_node_id, callback) {
-	$.ajax({
-			url: phpMySQLPrefix+'save_edge.php',
-			data: {
-				graph_id: graph_id,
-				source_node_id: source_node_id,
-				target_node_id: target_node_id
-			},
-			type: 'POST',
-			dataType: 'JSON',
-			cache: false
-		})
-		.done(function(data){
-			php_raw_data = data;
-			if(data.error){
-				console.log(data.error);
-				callback(data.error, null);
-			} else if(typeof(data.results) !== 'undefined') {
-				callback(null, data.results); // data results is success is num rows affected. 0/1.
-			} else if(typeof(data.results) === 'undefined') {
-				console.log('Data Results not recognized');
-				callback(new Error('Data Results not recognized'), null);
-			}
-		})
-		.fail(function(error){
-			console.log(error);
-			callback(error.responseText, null);
-		})
-	;
+	var url = phpMySQLPrefix+'save_edge.php';
+	var data = {
+		graph_id: graph_id,
+		source_node_id: source_node_id,
+		target_node_id: target_node_id
+	};
+	AJAX_TrueFalse_Call(url, data, callback);
 }
 
 function AJAX_delete_Edge(graph_id, source_node_id, target_node_id, callback) {
-	$.ajax({
-			url: phpMySQLPrefix+'delete_edge.php',
-			data: {
-				graph_id: graph_id,
-				source_node_id: source_node_id,
-				target_node_id: target_node_id
-			},
-			type: 'POST',
-			dataType: 'JSON',
-			cache: false
-		})
-		.done(function(data){
-			if(data.error){
-				console.log(data.error);
-				callback(data.error, null);
-			} else if(typeof(data.results) !== 'undefined') {
-				callback(null, data.results); // data results is success is num rows affected. 0/1.
-			} else if(typeof(data.results) === 'undefined') {
-				console.log('Data Results not recognized');
-				callback('Data Results not recognized', null);
-			}
-		})
-		.fail(function(error){
-			console.log(error);
-			callback(error.responseText, null);
-		})
-	;
+	var url = phpMySQLPrefix+'delete_edge.php';
+	var data = {
+		graph_id: graph_id,
+		source_node_id: source_node_id,
+		target_node_id: target_node_id
+	};
+	AJAX_TrueFalse_Call(url, data, callback);
 }
 
 // DEPRECATED! 05-21-2016.
 // Using for debugging.
 function AJAX_lock_Edges(graph_id, callback) {
-	'use strict'
-	$.ajax({
-			url: phpMySQLPrefix+'lock_edges.php',
-			data: {
-				graph_id: graph_id,
-			},
-			type: 'POST',
-			dataType: 'JSON',
-			cache: false
-		})
-		.done(function(data){
-			php_raw_data = data; // DEBUG
-			if(data.error){
-				console.log(data.error);
-				callback(data.error, null);
-			} else if(typeof(data.results) !== 'undefined') {
-				callback(null, data.results); // data results is success. is num rows affected. is 0/1.
-			} else if(typeof(data.results) === 'undefined') {
-				console.log('Data Results not recognized');
-				callback('Data Results not recognized', null);
-			}
-		})
-		.fail(function(error){
-			console.log(error);
-			callback(error.responseText, null);
-		})
-	;
+	var url = phpMySQLPrefix+'lock_edges.php';
+	var data = {
+		graph_id: graph_id
+	};
+	AJAX_TrueFalse_Call(url, data, callback);
 }
 
 function AJAX_unlock_Edges(graph_id, callback) {
-	'use strict'
+	var url = phpMySQLPrefix+'unlock_edges.php';
+	var data = {
+		graph_id: graph_id
+	};
+	AJAX_TrueFalse_Call(url, data, callback);
+}
+
+function AJAX_delete_unlocked_Edges(graph_id, callback) {
+	var url = phpMySQLPrefix+'unlock_edges.php';
+	var data = {
+		graph_id: graph_id
+	};
+	AJAX_TrueFalse_Call(url, data, callback);
+}
+
+function AJAX_save_Graph_Info(graph_id, graph_name, graph_desc, callback) {
+	var url = phpMySQLPrefix+'save_graph_info.php';
+	var data = {
+		graph_id: graph_id,
+		graph_name: graph_name,
+		graph_desc: graph_desc
+	};
+	AJAX_TrueFalse_Call(url, data, callback);
+}
+
+function AJAX_save_new_Graph(graph_name, graph_desc, callback) {
 	$.ajax({
-			url: phpMySQLPrefix+'unlock_edges.php',
+			url: phpMySQLPrefix+'insert_graph.php',
 			data: {
-				graph_id: graph_id,
+				graph_name: graph_name,
+				graph_desc: graph_desc
 			},
 			type: 'POST',
 			dataType: 'JSON',
 			cache: false
-		})
-		.done(function(data){
+		}).done(function(data){
 			php_raw_data = data; // DEBUG
 			if(data.error){
 				console.log(data.error);
 				callback(data.error, null);
 			} else if(typeof(data.results) !== 'undefined') {
-				callback(null, data.results); // data results is success. is num rows affected. is 0/1.
+				callback(null, data.results);
 			} else if(typeof(data.results) === 'undefined') {
 				console.log('Data Results not recognized');
 				callback('Data Results not recognized', null);
 			}
-		})
-		.fail(function(error){
-			console.log(error);
-			callback(error.responseText, null);
-		})
-	;
-}
-
-function AJAX_delete_unlocked_Edges(graph_id, callback) {
-	'use strict'
-	$.ajax({
-			url: phpMySQLPrefix+'delete_unlocked_edges.php',
-			data: {
-				graph_id: graph_id,
-			},
-			type: 'POST',
-			dataType: 'JSON',
-			cache: false
-		})
-		.done(function(data){
-			if(data.error){
-				console.log(data.error);
-				callback(data.error, null);
-			} else if(typeof(data.results) !== 'undefined') {
-				callback(null, data.results); // data results is success. is num rows affected. is 0/1.
-			} else if(typeof(data.results) === 'undefined') {
-				console.log('Data Results not recognized');
-				callback('Data Results not recognized', null);
-			}
-		})
-		.fail(function(error){
+		}).fail(function(error){
 			console.log(error);
 			callback(error.responseText, null);
 		})
@@ -213,34 +153,14 @@ function AJAX_save_Node_Info(graph_id, node_obj, callback) {
 		node_data.push(node_obj.operation_right);
 	}
 	// Send Save Command
-	$.ajax({
-			url: phpMySQLPrefix+'save_node_info.php',
-			data: {
-				graph_id: graph_id,
-				node_id: node_obj.id,
-				columns: MySQL_columns,
-				values: node_data
-			},
-			type: 'POST',
-			dataType: 'JSON',
-			cache: false
-		})
-		.done(function(data){
-			if(data.error){
-				console.log(data.error);
-				callback(data.error, null);
-			} else if(typeof(data.results) !== 'undefined') {
-				callback(null, data.results); // data results is success is num rows affected. 0/1.
-			} else if(typeof(data.results) === 'undefined') {
-				console.log('Data Results not recognized');
-				callback('Data Results not recognized', null);
-			}
-		})
-		.fail(function(error){
-			console.log(error);
-			callback(error.responseText, null);
-		})
-	;
+	var url = phpMySQLPrefix+'save_node_info.php';
+	var data = {
+		graph_id: graph_id,
+		node_id: node_obj.id,
+		columns: MySQL_columns,
+		values: node_data
+	};
+	AJAX_TrueFalse_Call(url, data, callback);
 }
 
 function AJAX_load_Node_Info(graph_id, node_id, callback) {
@@ -256,7 +176,6 @@ function AJAX_load_Node_Info(graph_id, node_id, callback) {
 			cache: false
 		})
 		.done(function(data){
-			php_raw_data = data; // DEBUG
 			if(data.error){
 				console.log(data.error);
 				callback(data.error, null);
@@ -436,68 +355,3 @@ function AJAX_load_Graph_Info(graph_id, callback) {
 		})
 	;
 }
-
-function AJAX_load_Graph_Info(graph_id, callback) {
-	$.ajax({
-			url: phpMySQLPrefix+'load_graph_info.php',
-			data: {
-				graph_id: graph_id
-			},
-			type: 'POST',
-			dataType: 'JSON',
-			cache: false
-		})
-		.done(function(data){
-			php_raw_data2 = data; // DEBUG
-			if(data.error){
-				console.log(data.error);
-				callback(data.error, null);
-			} else if(data.results) {
-				var graph_info = {};
-				graph_info['id'] = data.results[0];
-				graph_info['name'] = data.results[1];
-				graph_info['desc'] = data.results[2];
-				callback(null, graph_info);
-			} else if(typeof(data.results) === 'undefined') {
-				console.log('Data Results not recognized');
-				callback('Data Results not recognized', null);
-			}
-		})
-		.fail(function(error){
-			console.log(error);
-			callback(error.responseText, null);
-		})
-	;
-}
-
-function AJAX_save_Graph_Info(graph_id, graph_name, graph_desc, callback) {
-	$.ajax({
-			url: phpMySQLPrefix+'save_graph_info.php',
-			data: {
-				graph_id: graph_id,
-				graph_name: graph_name,
-				graph_desc: graph_desc
-			},
-			type: 'POST',
-			dataType: 'JSON',
-			cache: false
-		})
-		.done(function(data){
-			php_raw_data = data;
-			if(data.error){
-				console.log(data.error);
-				callback(data.error, null);
-			} else if(typeof(data.results) !== 'undefined') {
-				callback(null, data.results); // data results is success is num rows affected. 0/1.
-			} else if(typeof(data.results) === 'undefined') {
-				console.log('Data Results not recognized');
-				callback(new Error('Data Results not recognized'), null);
-			}
-		})
-		.fail(function(error){
-			console.log(error);
-			callback(error.responseText, null);
-		})
-	;
-}
-

@@ -43,6 +43,8 @@
 	<script type='text/javascript'>
 		var x;
 		window.onload=function() {
+			// AJAX_get_Node_ID_Count(function(e, d){x=d; console.log(d);});
+			AJAX_save_new_Graph('test_4', 'hoping to get new id back as the graph id', function(e, d){x=d; console.log(d);});
 			// AJAX_delete_unlocked_Edges(1, function(e, d){x=d; console.log(d);});
 			// var node_data = {
 			// 	id: 6,
@@ -72,7 +74,7 @@
 			// 		if(error) { alert (error); }
 			// 	}
 			// })
-			// AJAX_save_Graph_Info(3,'test_test','testing updating on another test graph',function(e, d){x=d; console.log(d);});
+			// AJAX_save_Graph_Info(3,'some_test','removing desc',function(e, d){x=d; console.log(d);});
 			// AJAX_load_Graphs(function(e, d){x=d; console.log(d);});
 			// AJAX_load_Graph_Nodes(1);
 			// AJAX_load_Graph_Nodes(1, function(e, d){x=d; console.log(d);});
