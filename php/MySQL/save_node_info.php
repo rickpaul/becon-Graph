@@ -1,6 +1,6 @@
 <?php
 	header("Content-Type: application/json", true);
-	// require_once "../config.php";
+	require_once "../config.php";
 	// require_once "../KLogger.php"; // DEBUG
 	// $log = new KLogger ( "../../_logfiles/save_node_info.log" , KLogger::DEBUG ); // DEBUG
 	// $log->logDebug('Log Initialized.'); // DEBUG
@@ -21,7 +21,7 @@
 		$columns = implode(', ' ,$columns);
 
 		// Construct Query
-		$query = "insert into `nodes`
+		$query = "insert ignore into `nodes`
 		(`graph_id`, `node_id`, $columns)
 		values ($graph_id, $node_id, $values)
 		on duplicate key update $update;

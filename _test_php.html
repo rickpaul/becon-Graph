@@ -41,10 +41,14 @@
 	<script type='text/javascript' src='js/becon_graph_AJAX.js'></script>
 	<script type='text/javascript' src='js/becon_graph_Node.js'></script>
 	<script type='text/javascript'>
-		var x;
+		var err, dat;
+		var save_log_fn = function(e, d){err = e; dat = d; console.log(d);};
 		window.onload=function() {
+			AJAX_get_Node_ID_Count(save_log_fn);
+			// AJAX_copy_Edges(1, 3, save_log_fn);
+			// AJAX_copy_Nodes(1, 3, save_log_fn);
 			// AJAX_get_Node_ID_Count(function(e, d){x=d; console.log(d);});
-			AJAX_save_new_Graph('test_4', 'hoping to get new id back as the graph id', function(e, d){x=d; console.log(d);});
+			// AJAX_save_new_Graph('test_4', 'hoping to get new id back as the graph id', function(e, d){x=d; console.log(d);});
 			// AJAX_delete_unlocked_Edges(1, function(e, d){x=d; console.log(d);});
 			// var node_data = {
 			// 	id: 6,
@@ -76,8 +80,7 @@
 			// })
 			// AJAX_save_Graph_Info(3,'some_test','removing desc',function(e, d){x=d; console.log(d);});
 			// AJAX_load_Graphs(function(e, d){x=d; console.log(d);});
-			// AJAX_load_Graph_Nodes(1);
-			// AJAX_load_Graph_Nodes(1, function(e, d){x=d; console.log(d);});
+			// AJAX_load_Graph_Nodes(3, save_log_fn);
 		}
 	</script>
 </html>

@@ -24,7 +24,7 @@
 			if(params.concept_aggregation) {this.concept_aggregation = params.concept_aggregation;}
 			// Input Params
 			// if(typeof(params.input_mode_)!=='undefined') {this.input_mode_ = params.input_mode_;}
-			if(typeof(params.input_source_)!=='undefined') {this.input_source_ = params.input_source_;}
+			if(typeof(params.input_source)!=='undefined') {this.input_source_ = params.input_source;}
 			// if(typeof(params.input_scalar_)!=='undefined') {this.input_scalar_ = params.input_scalar_;}
 			if(typeof(params.earliest_date)!=='undefined') {this.earliest_date = params.earliest_date;}
 			if(typeof(params.latest_date)!=='undefined') {this.latest_date = params.latest_date;}
@@ -49,7 +49,7 @@
 			if(this.type_ === consts.CONCEPT){
 				save_params.concept_aggregation = this.concept_aggregation;
 			} else if(this.type_ === consts.INPUT){
-				save_params.input_source_ = this.input_source_;
+				save_params.input_source = this.input_source_;
 				// save_params.input_mode_ = this.input_mode_;
 				// if(this.input_mode_ === consts.SCALAR){
 				// 	save_params.input_scalar_ = this.input_scalar_;
@@ -170,12 +170,16 @@
 				return 'OUT: ' + this.name;
 			} else if ( this.type_ === consts.OPERATIONAL ) {
 				var left_str = '??';
-				if(typeof(this.operation_left)!=='undefined' && this.operation_left !== consts.DEFAULT) {
-					left_str = (graph.nodes[this.operation_left]).name;
-				}
 				var rght_str = '??';
-				if(typeof(this.operation_right)!=='undefined' && this.operation_right !== consts.DEFAULT) {
-					rght_str = graph.nodes[this.operation_right].name;
+				try {
+					if(typeof(this.operation_left)!=='undefined' && this.operation_left !== consts.DEFAULT) {
+						left_str = (graph.nodes[this.operation_left]).name;
+					}
+					if(typeof(this.operation_right)!=='undefined' && this.operation_right !== consts.DEFAULT) {
+						rght_str = graph.nodes[this.operation_right].name;
+					}
+				} catch(exception) {
+					console.log(exception);
 				}
 				return (left_str + ' ' + operation_translator[this.operation_type] + ' ' + rght_str);
 			} else {

@@ -30,6 +30,7 @@
 	};
 
 	function initialize_svg_graph_group(svg_){
+		svg_.select('.graph').remove();
 		var svg_group = svg_.append('g')
 			.classed(consts.graphClass, true);
 		return svg_group;
@@ -42,8 +43,8 @@
 		////////////////////////////////////////////////////////////////////////////
 		// Graph State Variables
 		////////////////////////////////////////////////////////////////////////////
-		graph = this; // TODO: Do we only need to do this once?
-		this.graph_id = graph_id_;
+		graph = this;
+		this.graph_id = graph_id_ || AJAX_get_Graph_ID_Count();
 		this.async_tasks = 0; // hack for making sure we're dealing with async tasks.
 		// Add Nodes and Edges
 		// Add Nodes and Edges / Get ID Count
@@ -126,6 +127,7 @@
 				})
 			this.svg.call(this.graph_zoom).on('dblclick.zoom', null);
 			// Zoom Slider Listener
+			$('#slider-holder').empty();
 			this.zoom_slider = d3.select('#slider-holder').append('p').append('input')
 				.datum({})
 				.attr('type', 'range')
@@ -178,6 +180,21 @@
 			if(callback){callback(null, -1);}
 		},
 		////////////////////////////////////////////////////////////////////////////
+		// Clear Functions
+		////////////////////////////////////////////////////////////////////////////
+		clear_nodes: function() {
+			this.nodes = {};
+			// Reset Graph
+			this.update_graph();
+		},
+		clear_edges: function() {
+			this.edges = [];
+			this.edges_by_source = new Array_Dictionary();
+			this.edges_by_target = new Array_Dictionary();
+			// Reset Graph
+			this.update_graph();
+		},
+		////////////////////////////////////////////////////////////////////////////
 		// Loading Functions
 		////////////////////////////////////////////////////////////////////////////
 		fromObj_load_nodes: function(nodes_) {
@@ -194,9 +211,7 @@
 		},
 		fromObj_load_edges: function(edges_) {
 			// Clear Old Edges
-			this.edges = [];
-			graph.edges_by_source = new Array_Dictionary();
-			graph.edges_by_target = new Array_Dictionary();
+			this.clear_edges();
 			// Add New Edges
 			edges_.forEach(function(edge_){
 				graph.edges.push(edge_);
@@ -212,18 +227,18 @@
 				.defer(graph.increment_task_count)
 				.defer(AJAX_load_Graph_Nodes, load_graph_id)
 				.await(function(error, task_action, nodes_) {
-					graph.nodes = {};
-					nodes_.forEach(function(d){graph.nodes[d] = null;});
 					graph.decrement_task_count();
+					// Clear Old Nodes
+					graph.clear_nodes();
+					// Repopulate with Empty Nodes
+					nodes_.forEach(function(d){graph.nodes[d] = null;});
 					var inner_q = queue();
-					// Get Node Info
+					// Request new Node Info
 					Object.keys(graph.nodes).forEach(function(node_id) {
 						graph.increment_task_count();
 						inner_q.defer(AJAX_load_Node_Info, load_graph_id, node_id);
 					});
 					inner_q.awaitAll(function(error, nodes_) {
-						// Clear Old Nodes
-						graph.nodes = {};
 						// Replace Nodes
 						nodes_.forEach(function(node_){
 							graph.nodes[node_.id] = new Node(node_);
@@ -234,7 +249,6 @@
 					});
 				})
 			;
-			this.update_graph();
 		},
 		fromDB_load_edges: function(graph_id) {
 			var load_graph_id = graph_id || this.graph_id;
@@ -243,9 +257,7 @@
 				.defer(AJAX_load_Graph_Edges, load_graph_id)
 				.await(function(error, task_action, edges_) {
 					// Clear Old Edges
-					graph.edges = [];
-					graph.edges_by_source = new Array_Dictionary();
-					graph.edges_by_target = new Array_Dictionary();
+					graph.clear_edges();
 					// Add New Edges
 					edges_.forEach(function(edge_){
 						graph.edges.push(edge_);
@@ -274,7 +286,17 @@
 			});
 		},
 		toDB_save_nodes: function() {
-			
+			var graph_id = graph.graph_id;
+			var q = queue();
+			_.each(graph.nodes, function(node_obj_, node_id_) { 
+				graph.increment_task_count();
+				q.defer(AJAX_save_Node_Info, graph_id, node_obj_.toSimpleObject());
+			});
+			q.awaitAll(function(error, successes) {
+				successes.forEach(function(success_) {
+					if( success_ === 1 ) { graph.decrement_task_count(); }
+				});
+			});
 		},
 		toDB_save_edges: function() {
 			var graph_id = this.graph_id;
@@ -296,8 +318,8 @@
 					});
 					// Delete Unlocked Edges
 					queue()
-						.defer(graph.increment_task_count)
-						.defer(AJAX_delete_unlocked_Edges, graph_id)
+						.defer(graph.increment_task_count) // returns task_action
+						.defer(AJAX_delete_unlocked_Edges, graph_id) // returns success
 						.await(function(error, task_action, success) {
 							graph.decrement_task_count();
 						})
@@ -325,6 +347,7 @@
 				return false;
 			}
 			// Move the graph
+			console
 			d3.select('.graph')
 				.attr('transform', 'translate(' + d3.event.translate + ') scale(' + d3.event.scale + ')');
 			this.zoom_slider.property('value',  d3.event.scale);

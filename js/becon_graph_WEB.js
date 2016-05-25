@@ -11,11 +11,35 @@ var edit_graph = null; // Sloppy...
 ////////////////////////////////////////////////////////////////////////////////
 // WEB CODE
 ////////////////////////////////////////////////////////////////////////////////
+
+function WEB_show_load_graph_subform() {
+	WEB_hide_graph_info_subform();
+	$('#graph_load_subform').show();
+}
+
+function WEB_hide_load_graph_subform() {
+	$('#graph_load_subform').hide();
+}
+
+function WEB_handle_load_graph() {
+	graph.graph_id = parseInt($('#graph-select').val());
+	$('#txt-graph-id').text('...');
+	$('#txt-graph-name').text('...');
+	$('#txt-graph-desc').text('...');
+	graph.fromDB_load_nodes();
+	graph.fromDB_load_edges();
+	AJAX_load_Graph_Info(graph.graph_id, function(error, graph_info){
+		$('#txt-graph-id').text(graph_info.id);
+		$('#txt-graph-name').text(graph_info.name);
+		$('#txt-graph-desc').text(graph_info.desc);
+	});
+}
+
 function WEB_hide_graph_info_subform() {
 	$('#graph_info_subform').hide();
 }
-
 function WEB_show_graph_info_subform() {
+	WEB_hide_load_graph_subform();
 	$('#graph_info_subform').show();
 }
 
@@ -39,50 +63,55 @@ function graph_name_acceptable(graph_name_) {
 	// TODO: Fill in with other checks
 	return graph_name_ != '';
 }
+
 function WEB_save_graph_info() {
 	var graph_name = $('#graph-name-input').val();
 	if (!graph_name_acceptable(graph_name)){return;}
 	var graph_desc = $('#graph-desc-input').val();
-	if( edit_graph ) {
-		AJAX_save_Graph_Info(graph.graph_id, graph_name, graph_desc,function(error, success_){
-			if( !error && success_ ) {
-				$('#txt-graph-name').text(graph_name);
-				$('#txt-graph-desc').text(graph_desc);
-			} else {
-				console.log('ERROR'); // TODO: HANDLE BETTER
-			}
-		});
-	} else {
-		AJAX_save_new_Graph(graph_name, graph_desc, function(error, graph_id_){
-			if( !error ) {
-				graph.graph_id = graph_id_;
-				$('#txt-graph-id').text(graph.graph_id);	
-				$('#txt-graph-name').text(graph_name);
-				$('#txt-graph-desc').text(graph_desc);
-			} else {
-				console.log('ERROR'); // TODO: HANDLE BETTER
-			}
-		});
-	}
+	AJAX_save_Graph_Info
+	// if( edit_graph ) {
+	// 	AJAX_save_Graph_Info(graph.graph_id, graph_name, graph_desc,function(error, success_){
+	// 		if( !error && success_ ) {
+	// 			$('#txt-graph-name').text(graph_name);
+	// 			$('#txt-graph-desc').text(graph_desc);
+	// 		} else {
+	// 			console.log('ERROR'); // TODO: HANDLE BETTER
+	// 		}
+	// 	});
+	// } else {
+	// 	var old_graph_id = graph.graph_id;
+	// 	AJAX_save_new_Graph(graph_name, graph_desc, function(error, new_graph_id){
+	// 		if( !error ) {
+	// 			AJAX_copy_Edges(old_graph_id, new_graph_id);
+	// 			$('#txt-graph-id').text(new_graph_id);	
+	// 			$('#txt-graph-name').text(graph_name);
+	// 			$('#txt-graph-desc').text(graph_desc);
+	// 			graph.graph_id = new_graph_id;
+	// 		} else {
+	// 			console.log('ERROR'); // TODO: HANDLE BETTER
+	// 		}
+	// 	});
+	// }
 	WEB_populate_graph_select_box();
 	WEB_hide_graph_info_subform();
 	edit_graph = null;
 }
 function WEB_handle_save_graph() {
-	// graph.toDB_save_nodes();
-	// graph.toDB_save_edges();
+	graph.toDB_save_nodes();
+	graph.toDB_save_edges();
 }
-function WEB_handle_load_graph() {
-	graph.graph_id = parseInt($('#graph-select').val());
-	$('#txt-graph-id').text('...');
-	$('#txt-graph-name').text('...');
-	$('#txt-graph-desc').text('...');
-	graph.fromDB_load_nodes();
-	graph.fromDB_load_edges();
-	AJAX_load_Graph_Info(graph.graph_id, function(error, graph_info){
-		$('#txt-graph-id').text(graph_info.id);
-		$('#txt-graph-name').text(graph_info.name);
-		$('#txt-graph-desc').text(graph_info.desc);
+function WEB_handle_new_graph() {
+	AJAX_get_Graph_ID_Count(function(error, graph_id_) {
+		if( !error ) {
+			console.log('Initializing empty graph');
+			graph = new Graph(svg, graph_id_);
+			graph.update_graph();
+			$('#txt-graph-id').text(graph_id_);
+			$('#txt-graph-name').text('');
+			$('#txt-graph-desc').text('');
+			edit_graph = false;
+			WEB_show_graph_info_subform();
+		}
 	});
 }
 function WEB_handle_run_graph(){
