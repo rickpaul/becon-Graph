@@ -60,22 +60,28 @@
 				<p class='major col-sm-offset-1 col-sm-4' id='txt-graph-desc'></p>
 			</div>
 			<div class='form-group'>
-				<a id='btn_run_graph'>
+<!-- 				<a id='btn_run_graph'>
 					<input class='col-sm-offset-1 col-sm-2' type='button' value='Run Graph' />
 				</a>
 				<a id='btn_check_graph'>
 					<input class='col-sm-offset-0 col-sm-2' type='button' value='Check Graph' />
-				</a>
+				</a> -->
 			</div>
 			<div class='form-group'>
 				<a id='btn_save_graph'>
 					<input class='col-sm-offset-1 col-sm-2' type='button' value='Save Graph' />
 				</a>
-				<a id='btn_save_as_graph'>
-					<input class='col-sm-offset-0 col-sm-2' type='button' value='Save As New' />
+				<a id='btn_new_graph'>
+					<input class='col-sm-offset-0 col-sm-2' type='button' value='New Graph' />
 				</a>
+<!-- 				<a id='btn_save_as_graph'>
+					<input class='col-sm-offset-0 col-sm-2' type='button' value='Save As New' />
+				</a> -->
 				<a id='btn_edit_graph_info'>
 					<input class='col-sm-offset-0 col-sm-2' type='button' value='Edit Graph Info' />
+				</a>
+				<a id='btn_load_graph'>
+					<input class='col-sm-offset-0 col-sm-2' type='button' value='Load Graph' />
 				</a>
 			</div>
 			<div class='form-group' id='graph_info_subform'>
@@ -95,11 +101,17 @@
 				</div>
 			</div>
 			<div class='form-group' id='graph_load_subform'>
-				<a id='btn_load_graph'>
-					<input class='col-sm-offset-1 col-sm-2' type='button' value='Load Graph' />
-				</a>
+				<label class='control-label col-sm-offset-1 col-sm-2'>Select Graph:</label>
 				<div>
 					<select class='col-sm-offset-0 col-sm-2' id='graph-select'></select> 
+				</div>
+				<div>
+					<a id='btn_load_graph_load'>
+						<input class='col-sm-offset-0' type='button' value='Load'> 
+					</a>
+					<a id='btn_load_graph_cancel'>
+						<input class='col-sm-offset-0' type='button' value='Cancel'> 
+					</a>
 				</div>
 			</div>
 		</form>
@@ -210,13 +222,20 @@
 			WEB_hide_edge_form();
 			// Graph Controls
 			$('#btn_save_graph').bind('click', WEB_handle_save_graph);
-			$('#btn_save_as_graph').bind('click', WEB_handle_graph_saveAs);
+			// $('#btn_save_as_graph').bind('click', WEB_handle_graph_saveAs);
+			// Graph Controls / Edit Graph Info
 			$('#btn_edit_graph_info').bind('click', WEB_handle_edit_graph_info);
 			$('#btn_cancel_graph_edit').bind('click', WEB_hide_graph_info_subform);
 			$('#btn_save_graph_edit').bind('click', WEB_save_graph_info);
-			$('#btn_load_graph').bind('click', WEB_handle_load_graph);
-			$('#btn_run_graph').bind('click', WEB_handle_run_graph);
-			$('#btn_check_graph').bind('click', WEB_handle_check_graph);
+			// Graph Controls / Load Graph
+			$('#btn_load_graph').bind('click', WEB_show_load_graph_subform);
+			$('#btn_load_graph_load').bind('click', WEB_handle_load_graph);
+			$('#btn_load_graph_cancel').bind('click', WEB_hide_load_graph_subform);
+			// Graph Controls / New Graph
+			$('#btn_new_graph').bind('click', WEB_handle_new_graph);
+
+			// $('#btn_run_graph').bind('click', WEB_handle_run_graph);
+			// $('#btn_check_graph').bind('click', WEB_handle_check_graph);
 			// Node Controls
 			$('#btn_save_node').bind('click', WEB_handle_node_submit);
 			$('#btn_cancel_node').bind('click', WEB_handle_node_cancel);

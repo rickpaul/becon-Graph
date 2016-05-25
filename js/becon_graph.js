@@ -15,7 +15,7 @@ function calibrate_canvas(svg){
 	var w_ = window.innerWidth || document_.clientWidth || body_.clientWidth;
 	var h_ =  window.innerHeight|| document_.clientHeight || body_.clientHeight;
 	// make space for control elements
-	h_ -= 350;
+	h_ -= 300;
 	svg.attr('width', w_).attr('height', h_);
 }
 
